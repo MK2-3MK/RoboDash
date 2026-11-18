@@ -894,8 +894,8 @@
 
     <div class="leaderboard-box">
       <div class="leaderboard-header">
-        <span class="leaderboard-title">🏆 ROBO DASH LEADERBOARD (ALL RUNS SAVED)</span>
-        <span id="lb-save-status" class="leaderboard-timer-badge">♾️ Every Run Logged</span>
+        <span class="leaderboard-title">🏆 ROBO DASH LEADERBOARD (1 ENTRY PER ROUND)</span>
+        <span id="lb-save-status" class="leaderboard-timer-badge">♾️ 1 Entry Per Round</span>
       </div>
 
       <!-- Filter Tabs -->
@@ -1058,7 +1058,6 @@
   const RESET_EPOCH_KEY = 'robodash_reset_epoch_v6';
   const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
 
-  // Automatic reset executed now on load (only updates when you ask for a reset here)
   (function runRequestedSeasonWipe() {
     try {
       if (!localStorage.getItem(RESET_EPOCH_KEY)) {
@@ -1215,8 +1214,8 @@
 
   // ==========================================
   // LEADERBOARD FUNCTIONS
-  // - Score Tabs: Infinite run entries per player
-  // - Robo Coins Tab: Strictly 1 entry per player
+  // - Score Tabs: Strictly 1 row per round played
+  // - Robo Coins Tab: Strictly 1 row per player
   // ==========================================
   let currentRunEntry = null;
   let currentLbFilter = 'both';
@@ -1241,9 +1240,10 @@
     const allRuns = [];
 
     clean.forEach((entry, index) => {
-      const runId = entry.id && !entry.id.startsWith(DEVICE_ID + '_')
+      // Preserve existing unique run ID; only create a deterministic fallback ID if missing
+      const runId = (typeof entry.id === 'string' && entry.id.trim().length > 0)
         ? entry.id
-        : `${entry.deviceId || 'run'}_${entry.updatedAt || Date.now()}_${index}`;
+        : `${entry.deviceId || 'run'}_${entry.updatedAt || 0}_${entry.score}_${entry.char}_${index}`;
 
       if (!seenIds.has(runId)) {
         seenIds.add(runId);
@@ -1290,22 +1290,16 @@
   }
 
   function submitAndRenderLeaderboard(newEntry) {
-    const uniqueRunEntry = {
-      ...newEntry,
-      id: `${DEVICE_ID}_run_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
-    };
-    currentRunEntry = uniqueRunEntry;
+    currentRunEntry = newEntry;
 
-    let merged = normalizeLeaderboardRuns([
-      ...getLocalLeaderboardSync(),
-      ...cachedGlobalBoard,
-      uniqueRunEntry
-    ]);
+    // Deduplicate cleanly by the single run ID so 1 round = 1 entry
+    const existing = getLocalLeaderboardSync().filter(item => item.id !== newEntry.id);
+    const merged = normalizeLeaderboardRuns([...existing, newEntry]);
 
     cachedGlobalBoard = merged;
     saveAllData(userProfile, merged);
 
-    lbSaveStatusEl.textContent = '♾️ Every Run Logged';
+    lbSaveStatusEl.textContent = '♾️ 1 Entry Per Round';
     renderFilteredLeaderboard();
   }
 
@@ -1391,7 +1385,7 @@
       return;
     }
 
-    // Score leaderboards: show every single round infinitely
+    // Score leaderboards: show 1 entry per round played
     lbRightColHeader.textContent = 'Run Time  |  Run Score';
 
     const filtered = cachedGlobalBoard
@@ -1582,7 +1576,7 @@
   }
   buildPixelBackground();
 
-  // Player Object (+13% Higher Jump Height: -1228 * sqrt(1.13) = -1305)
+  // Player Object
   const player = {
     x: canvas.width / 2,
     y: FLOOR_Y - 64,
@@ -1617,7 +1611,7 @@
     { x: canvas.width - 265, y: 462, w: 265, h: 32 }
   ];
 
-  // Robots with Supply Crates Behind Them + Smooth Multi-Stage Reach & Throw Animation
+  // Robots with Supply Crates Behind Them
   const robots = [
     {
       side: 'left',
@@ -2937,7 +2931,6 @@
     const startY = robot.y - 60;
     const speedMultiplier = Math.min(2.15, 1 + (difficultyTier - 1) * 0.09 + elapsedTime * 0.004);
 
-    // Every throw sprays 1 item at start, scaling endlessly into multi-item scatter volleys across the whole arena!
     const extraScatterCount = Math.min(4, Math.floor(elapsedTime / 14) + (Math.random() < Math.min(0.75, elapsedTime * 0.015) ? 1 : 0));
     const volleyCount = 1 + extraScatterCount;
 
@@ -3858,6 +3851,7 @@
   }
 
   function endGame() {
+    if (!gameRunning) return;
     gameRunning = false;
     hud.classList.add('hidden');
     aimLockBanner.classList.add('hidden');
@@ -3888,8 +3882,10 @@
 
     gameoverScreen.classList.remove('hidden');
 
+    const singleRunId = `${DEVICE_ID}_run_${Date.now()}_${Math.random().toString(36).slice(2, 7)}`;
+
     submitAndRenderLeaderboard({
-      id: `${DEVICE_ID}_run_${Date.now()}`,
+      id: singleRunId,
       deviceId: DEVICE_ID,
       isRealPlayer: true,
       name: playerName,

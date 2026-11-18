@@ -1,0 +1,3905 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Robo Dash</title>
+  <style>
+    * {
+      box-sizing: border-box;
+      margin: 0;
+      padding: 0;
+      user-select: none;
+    }
+
+    body {
+      background: #050a09;
+      color: #f8fafc;
+      font-family: 'Segoe UI', system-ui, -apple-system, sans-serif;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      min-height: 100vh;
+      overflow: hidden;
+    }
+
+    #game-wrapper {
+      position: relative;
+      width: 1680px;
+      max-width: 98vw;
+      max-height: 96vh;
+      aspect-ratio: 16 / 9;
+      background: #0f172a;
+      border: 3px solid #334155;
+      border-radius: 18px;
+      box-shadow: 0 25px 70px rgba(0, 0, 0, 0.85), 0 0 40px rgba(16, 185, 129, 0.15);
+      overflow: hidden;
+    }
+
+    canvas {
+      display: block;
+      width: 100%;
+      height: 100%;
+      image-rendering: pixelated;
+    }
+
+    /* Overlay Screens */
+    .overlay {
+      position: absolute;
+      inset: 0;
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      padding: 18px;
+      text-align: center;
+      z-index: 10;
+    }
+
+    /* Emerald Cyber-Grid & Blueprint Background for Name & Character Screens */
+    #name-screen,
+    #char-screen {
+      background-color: #061816;
+      background-image:
+        radial-gradient(circle at 20% 20%, rgba(16, 185, 129, 0.25) 0%, transparent 45%),
+        radial-gradient(circle at 80% 80%, rgba(6, 182, 212, 0.22) 0%, transparent 48%),
+        linear-gradient(rgba(52, 211, 153, 0.06) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(52, 211, 153, 0.06) 1px, transparent 1px),
+        radial-gradient(circle at 50% 50%, rgba(10, 35, 32, 0.92) 0%, rgba(4, 14, 13, 0.98) 90%);
+      background-size: 100% 100%, 100% 100%, 40px 40px, 40px 40px, 100% 100%;
+      backdrop-filter: blur(10px);
+    }
+
+    #gameover-screen {
+      background: radial-gradient(circle at center, rgba(15, 23, 42, 0.95), rgba(7, 11, 20, 0.99));
+      backdrop-filter: blur(8px);
+    }
+
+    .hidden {
+      display: none !important;
+    }
+
+    h1 {
+      font-size: clamp(1.85rem, 3.4vw, 2.8rem);
+      font-weight: 900;
+      letter-spacing: 2px;
+      background: linear-gradient(90deg, #34d399, #22d3ee, #38bdf8);
+      -webkit-background-clip: text;
+      -webkit-text-fill-color: transparent;
+      text-shadow: 0 4px 24px rgba(52, 211, 153, 0.25);
+      margin-bottom: 4px;
+    }
+
+    .subtitle {
+      color: #a7f3d0;
+      font-size: 0.98rem;
+      margin-bottom: 10px;
+    }
+
+    .wallet-pill {
+      display: inline-flex;
+      align-items: center;
+      gap: 8px;
+      padding: 6px 16px;
+      border-radius: 999px;
+      background: linear-gradient(135deg, rgba(203, 213, 225, 0.22), rgba(71, 85, 105, 0.38));
+      border: 1.5px solid #e2e8f0;
+      color: #f8fafc;
+      font-weight: 800;
+      font-size: 0.92rem;
+      margin-bottom: 12px;
+      box-shadow: 0 4px 14px rgba(0, 0, 0, 0.35);
+    }
+
+    /* Metallic Silver Robo Coin with Carved Robot Engraving */
+    .robo-coin-icon {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      width: 24px;
+      height: 24px;
+      border-radius: 50%;
+      background:
+        radial-gradient(circle at 30% 26%, #ffffff 0%, #f1f5f9 28%, #cbd5e1 62%, #64748b 100%);
+      border: 2px solid #f8fafc;
+      box-shadow:
+        0 0 8px rgba(226, 232, 240, 0.6),
+        inset 0 1px 2px rgba(255, 255, 255, 0.95),
+        inset 0 -2px 3px rgba(30, 41, 59, 0.65);
+      flex-shrink: 0;
+      vertical-align: middle;
+    }
+
+    .robo-coin-icon.sm {
+      width: 19px;
+      height: 19px;
+      border-width: 1.5px;
+    }
+
+    .robo-coin-icon svg {
+      width: 82%;
+      height: 82%;
+      display: block;
+    }
+
+    .remember-badge {
+      display: inline-block;
+      margin-bottom: 10px;
+      padding: 5px 15px;
+      border-radius: 999px;
+      background: rgba(16, 185, 129, 0.18);
+      border: 1px solid rgba(52, 211, 153, 0.5);
+      color: #6ee7b7;
+      font-size: 0.85rem;
+      font-weight: 700;
+    }
+
+    .cooldown-note {
+      font-size: 0.82rem;
+      color: #fcd34d;
+      background: rgba(245, 158, 11, 0.14);
+      border: 1px solid rgba(245, 158, 11, 0.4);
+      padding: 5px 14px;
+      border-radius: 10px;
+      margin-bottom: 12px;
+      font-weight: 700;
+    }
+
+    .input-group {
+      margin-bottom: 18px;
+      width: 100%;
+      max-width: 390px;
+    }
+
+    .input-group label {
+      display: block;
+      font-size: 0.85rem;
+      font-weight: 700;
+      color: #6ee7b7;
+      margin-bottom: 8px;
+      text-transform: uppercase;
+      letter-spacing: 1px;
+    }
+
+    #player-name-input {
+      width: 100%;
+      padding: 14px 18px;
+      font-size: 1.2rem;
+      font-weight: 700;
+      border-radius: 12px;
+      border: 2px solid #059669;
+      background: rgba(6, 26, 23, 0.95);
+      color: #fff;
+      text-align: center;
+      outline: none;
+      transition: border-color 0.2s, box-shadow 0.2s;
+    }
+
+    #player-name-input:focus:not(:disabled) {
+      border-color: #34d399;
+      box-shadow: 0 0 20px rgba(52, 211, 153, 0.4);
+    }
+
+    #player-name-input:disabled {
+      opacity: 0.65;
+      cursor: not-allowed;
+      border-color: #475569;
+      background: rgba(15, 23, 42, 0.85);
+      color: #cbd5e1;
+    }
+
+    .error-msg {
+      color: #fca5a5;
+      font-size: 0.88rem;
+      margin-top: 6px;
+      min-height: 20px;
+      font-weight: 700;
+    }
+
+    /* 4-Character Roster Grid */
+    .char-grid {
+      display: flex;
+      gap: 18px;
+      margin-bottom: 16px;
+      flex-wrap: wrap;
+      justify-content: center;
+      max-width: 1240px;
+    }
+
+    .char-card {
+      width: 245px;
+      background: linear-gradient(145deg, rgba(11, 38, 34, 0.94), rgba(6, 20, 18, 0.97));
+      border: 3px solid #065f46;
+      border-radius: 16px;
+      padding: 14px 14px 16px;
+      cursor: pointer;
+      transition: transform 0.16s, border-color 0.16s, box-shadow 0.16s;
+      position: relative;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .char-card:hover {
+      transform: translateY(-5px);
+      border-color: #10b981;
+    }
+
+    .char-card.selected {
+      border-color: #22d3ee;
+      background: linear-gradient(145deg, rgba(14, 52, 48, 0.96), rgba(8, 28, 26, 0.98));
+      box-shadow: 0 10px 30px rgba(34, 211, 238, 0.34);
+    }
+
+    .char-card.locked {
+      border-color: #475569;
+      background: linear-gradient(145deg, rgba(15, 23, 42, 0.92), rgba(9, 14, 26, 0.96));
+    }
+
+    .char-card.locked:hover {
+      border-color: #e2e8f0;
+      box-shadow: 0 8px 24px rgba(226, 232, 240, 0.24);
+    }
+
+    .char-preview {
+      width: 92px;
+      height: 100px;
+      margin: 0 auto 8px;
+      display: block;
+    }
+
+    .char-title {
+      font-size: 1.15rem;
+      font-weight: 800;
+      margin-bottom: 5px;
+      color: #f8fafc;
+    }
+
+    .char-stats {
+      font-size: 0.86rem;
+      color: #d1fae5;
+      line-height: 1.48;
+      margin-bottom: 8px;
+    }
+
+    .badge {
+      display: inline-block;
+      margin-top: 2px;
+      padding: 3px 10px;
+      border-radius: 999px;
+      font-size: 0.72rem;
+      font-weight: 700;
+      background: rgba(56, 189, 248, 0.18);
+      color: #38bdf8;
+      border: 1px solid rgba(56, 189, 248, 0.35);
+    }
+
+    .unlock-btn {
+      margin-top: 8px;
+      width: 100%;
+      padding: 7px 10px;
+      border-radius: 10px;
+      border: 1.5px solid #cbd5e1;
+      background: linear-gradient(135deg, rgba(148, 163, 184, 0.25), rgba(71, 85, 105, 0.45));
+      color: #f8fafc;
+      font-weight: 800;
+      font-size: 0.8rem;
+      cursor: pointer;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 6px;
+      transition: transform 0.12s, filter 0.12s;
+    }
+
+    .unlock-btn:hover {
+      transform: scale(1.03);
+      filter: brightness(1.15);
+    }
+
+    .unlock-btn.unlocked-tag {
+      border-color: rgba(52, 211, 153, 0.45);
+      background: rgba(16, 185, 129, 0.16);
+      color: #6ee7b7;
+      cursor: pointer;
+    }
+
+    .btn-row {
+      display: flex;
+      gap: 14px;
+      align-items: center;
+      flex-wrap: wrap;
+      justify-content: center;
+    }
+
+    .btn-primary {
+      padding: 12px 32px;
+      font-size: 1.02rem;
+      font-weight: 800;
+      letter-spacing: 0.8px;
+      border: none;
+      border-radius: 12px;
+      background: linear-gradient(135deg, #10b981, #0284c7);
+      color: #fff;
+      cursor: pointer;
+      box-shadow: 0 10px 25px rgba(16, 185, 129, 0.4);
+      transition: transform 0.15s, filter 0.15s;
+    }
+
+    .btn-primary:hover {
+      transform: scale(1.04);
+      filter: brightness(1.12);
+    }
+
+    .btn-primary:active {
+      transform: scale(0.98);
+    }
+
+    .btn-secondary {
+      padding: 12px 20px;
+      font-size: 0.92rem;
+      font-weight: 700;
+      border: 2px solid #059669;
+      border-radius: 12px;
+      background: rgba(8, 30, 27, 0.85);
+      color: #d1fae5;
+      cursor: pointer;
+      transition: border-color 0.15s, color 0.15s, opacity 0.15s;
+    }
+
+    .btn-secondary:hover:not(:disabled) {
+      border-color: #34d399;
+      color: #fff;
+    }
+
+    .controls-hint {
+      margin-top: 10px;
+      font-size: 0.85rem;
+      color: #a7f3d0;
+    }
+
+    /* HUD */
+    #hud {
+      position: absolute;
+      top: 16px;
+      left: 20px;
+      right: 20px;
+      display: flex;
+      justify-content: space-between;
+      align-items: flex-start;
+      pointer-events: none;
+      z-index: 5;
+    }
+
+    .hud-box {
+      background: rgba(15, 23, 42, 0.82);
+      backdrop-filter: blur(6px);
+      border: 2px solid #334155;
+      padding: 10px 18px;
+      border-radius: 12px;
+      font-weight: 700;
+      font-size: 0.95rem;
+      box-shadow: 0 6px 16px rgba(0, 0, 0, 0.35);
+    }
+
+    #shield-indicator {
+      margin-top: 4px;
+      font-size: 0.82rem;
+      color: #38bdf8;
+      font-weight: 800;
+      min-height: 16px;
+    }
+
+    #ability-indicator {
+      margin-top: 3px;
+      font-size: 0.82rem;
+      color: #a78bfa;
+      font-weight: 800;
+    }
+
+    #aim-lock-banner {
+      background: rgba(127, 29, 29, 0.9);
+      border: 2px solid #f43f5e;
+      color: #fecdd3;
+      padding: 8px 20px;
+      border-radius: 999px;
+      font-weight: 900;
+      font-size: 0.95rem;
+      letter-spacing: 1px;
+      box-shadow: 0 0 22px rgba(244, 63, 94, 0.65);
+      animation: pulseLock 0.35s infinite alternate;
+    }
+
+    @keyframes pulseLock {
+      from { transform: scale(1); }
+      to { transform: scale(1.06); }
+    }
+
+    /* Reward Banner on Game Over */
+    .coin-reward-banner {
+      display: inline-flex;
+      align-items: center;
+      gap: 10px;
+      background: linear-gradient(135deg, rgba(71, 85, 105, 0.78), rgba(30, 41, 59, 0.94));
+      border: 2px solid #e2e8f0;
+      padding: 7px 18px;
+      border-radius: 999px;
+      margin-bottom: 10px;
+      font-size: 0.94rem;
+      font-weight: 800;
+      color: #f8fafc;
+      box-shadow: 0 6px 20px rgba(0, 0, 0, 0.45);
+    }
+
+    /* Leaderboard Panel on Game Over */
+    .leaderboard-box {
+      width: 100%;
+      max-width: 860px;
+      background: rgba(15, 23, 42, 0.92);
+      border: 2px solid #334155;
+      border-radius: 16px;
+      padding: 12px 16px;
+      margin-bottom: 14px;
+      box-shadow: 0 12px 30px rgba(0, 0, 0, 0.55);
+    }
+
+    .leaderboard-header {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      margin-bottom: 8px;
+      padding-bottom: 7px;
+      border-bottom: 1px solid #334155;
+      flex-wrap: wrap;
+      gap: 8px;
+    }
+
+    .leaderboard-title {
+      font-size: 0.98rem;
+      font-weight: 900;
+      letter-spacing: 0.8px;
+      color: #facc15;
+    }
+
+    .leaderboard-timer-badge {
+      font-size: 0.78rem;
+      font-weight: 800;
+      color: #34d399;
+      background: rgba(16, 185, 129, 0.14);
+      border: 1px solid rgba(52, 211, 153, 0.38);
+      padding: 3px 10px;
+      border-radius: 999px;
+    }
+
+    /* Filter Tabs inside Leaderboard */
+    .lb-filter-bar {
+      display: flex;
+      gap: 6px;
+      margin-bottom: 8px;
+      justify-content: center;
+      flex-wrap: wrap;
+    }
+
+    .lb-filter-btn {
+      flex: 1;
+      min-width: 115px;
+      padding: 6px 8px;
+      border-radius: 9px;
+      border: 2px solid #334155;
+      background: rgba(30, 41, 59, 0.8);
+      color: #94a3b8;
+      font-size: 0.78rem;
+      font-weight: 800;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      gap: 5px;
+    }
+
+    .lb-filter-btn:hover {
+      border-color: #64748b;
+      color: #f8fafc;
+    }
+
+    .lb-filter-btn.active {
+      border-color: #22d3ee;
+      background: rgba(14, 116, 144, 0.35);
+      color: #22d3ee;
+      box-shadow: 0 0 12px rgba(34, 211, 238, 0.25);
+    }
+
+    .lb-columns-head {
+      display: flex;
+      justify-content: space-between;
+      font-size: 0.7rem;
+      font-weight: 800;
+      color: #64748b;
+      text-transform: uppercase;
+      letter-spacing: 0.8px;
+      padding: 0 12px 5px;
+    }
+
+    #leaderboard-list {
+      max-height: 195px;
+      overflow-y: auto;
+      display: flex;
+      flex-direction: column;
+      gap: 6px;
+      padding-right: 4px;
+    }
+
+    #leaderboard-list::-webkit-scrollbar {
+      width: 6px;
+    }
+
+    #leaderboard-list::-webkit-scrollbar-thumb {
+      background: #475569;
+      border-radius: 999px;
+    }
+
+    .lb-row {
+      display: flex;
+      justify-content: space-between;
+      align-items: center;
+      padding: 8px 12px;
+      border-radius: 10px;
+      background: rgba(30, 41, 59, 0.72);
+      font-size: 0.88rem;
+      border: 1px solid transparent;
+    }
+
+    .lb-row.device-you {
+      background: rgba(14, 116, 144, 0.28);
+      border-color: rgba(34, 211, 238, 0.55);
+    }
+
+    .lb-row.latest-run {
+      background: rgba(14, 116, 144, 0.44);
+      border-color: #22d3ee;
+      box-shadow: 0 0 12px rgba(34, 211, 238, 0.3);
+    }
+
+    .lb-left-col {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      min-width: 0;
+      flex: 1;
+    }
+
+    .lb-you-tag {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      background: linear-gradient(135deg, #22d3ee, #10b981);
+      color: #041311;
+      font-size: 0.7rem;
+      font-weight: 900;
+      padding: 2px 7px;
+      border-radius: 6px;
+      letter-spacing: 0.5px;
+      flex-shrink: 0;
+      box-shadow: 0 0 8px rgba(34, 211, 238, 0.45);
+    }
+
+    .lb-rank {
+      font-weight: 900;
+      min-width: 46px;
+      text-align: left;
+      color: #94a3b8;
+      flex-shrink: 0;
+    }
+
+    .lb-rank.top-1 { color: #facc15; }
+    .lb-rank.top-2 { color: #e2e8f0; }
+    .lb-rank.top-3 { color: #fb923c; }
+
+    .lb-name {
+      text-align: left;
+      font-weight: 700;
+      color: #f8fafc;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    .lb-char-pill {
+      display: inline-block;
+      font-size: 0.7rem;
+      padding: 2px 8px;
+      border-radius: 999px;
+      margin-left: 6px;
+      font-weight: 700;
+      background: rgba(148, 163, 184, 0.16);
+      color: #cbd5e1;
+    }
+
+    .lb-char-pill.scout {
+      background: rgba(52, 211, 153, 0.18);
+      color: #6ee7b7;
+    }
+
+    .lb-char-pill.golem {
+      background: rgba(251, 146, 60, 0.18);
+      color: #fdba74;
+    }
+
+    .lb-char-pill.lynx {
+      background: rgba(56, 189, 248, 0.18);
+      color: #7dd3fc;
+    }
+
+    .lb-char-pill.warden {
+      background: rgba(167, 139, 250, 0.22);
+      color: #ddd6fe;
+    }
+
+    .lb-stats-right {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+      font-variant-numeric: tabular-nums;
+      flex-shrink: 0;
+    }
+
+    .lb-time-val {
+      font-size: 0.8rem;
+      color: #94a3b8;
+      font-weight: 700;
+    }
+
+    .lb-coin-val {
+      display: inline-flex;
+      align-items: center;
+      gap: 5px;
+      font-size: 0.86rem;
+      font-weight: 800;
+      color: #f1f5f9;
+      background: rgba(148, 163, 184, 0.2);
+      padding: 2px 9px;
+      border-radius: 999px;
+      border: 1px solid rgba(226, 232, 240, 0.45);
+    }
+
+    .lb-score {
+      font-weight: 900;
+      color: #34d399;
+      min-width: 78px;
+      text-align: right;
+    }
+
+    /* Mobile Touch Controls */
+    #touch-controls {
+      position: absolute;
+      bottom: 18px;
+      left: 20px;
+      right: 20px;
+      display: none;
+      justify-content: space-between;
+      z-index: 8;
+    }
+
+    @media (pointer: coarse) {
+      #touch-controls {
+        display: flex;
+      }
+    }
+
+    .touch-group {
+      display: flex;
+      gap: 14px;
+    }
+
+    .touch-btn {
+      width: 64px;
+      height: 64px;
+      border-radius: 50%;
+      background: rgba(255, 255, 255, 0.16);
+      border: 2px solid rgba(255, 255, 255, 0.35);
+      color: #fff;
+      font-size: 1.5rem;
+      font-weight: bold;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      touch-action: manipulation;
+    }
+  </style>
+</head>
+<body>
+
+<div id="game-wrapper">
+  <canvas id="gameCanvas" width="1728" height="972"></canvas>
+
+  <!-- HUD -->
+  <div id="hud" class="hidden">
+    <div class="hud-box">
+      <div id="hud-player-name" style="color:#38bdf8;">Player</div>
+      <div id="shield-indicator"></div>
+      <div id="ability-indicator" class="hidden"></div>
+    </div>
+    <div id="aim-lock-banner" class="hidden">🎯 TARGET LOCK ACTIVE (1.0s)</div>
+    <div class="hud-box" style="text-align:right;">
+      <div style="color:#facc15; font-size:1.1rem;">SCORE: <span id="hud-score">0</span></div>
+      <div style="font-size:0.84rem; color:#e2e8f0; margin-top:3px; display:flex; align-items:center; justify-content:flex-end; gap:6px;">
+        <span>TIME: <span id="hud-time" style="color:#f8fafc;">0.0</span>s</span>
+        <span>&bull;</span>
+        <span class="robo-coin-icon sm" title="Silver Robo Coin">
+          <svg viewBox="0 0 24 24" fill="none">
+            <circle cx="12" cy="12" r="10.2" stroke="#64748b" stroke-width="1.2"/>
+            <line x1="12" y1="3.2" x2="12" y2="6.2" stroke="#334155" stroke-width="1.8" stroke-linecap="round"/>
+            <circle cx="12" cy="2.8" r="1.4" fill="#475569"/>
+            <rect x="6" y="6.2" width="12" height="10.2" rx="2.4" fill="#94a3b8" stroke="#334155" stroke-width="1.5"/>
+            <line x1="6" y1="6.8" x2="18" y2="6.8" stroke="#f8fafc" stroke-width="0.9"/>
+            <rect x="4.2" y="9.2" width="1.8" height="4.2" rx="0.8" fill="#475569"/>
+            <rect x="18" y="9.2" width="1.8" height="4.2" rx="0.8" fill="#475569"/>
+            <circle cx="9.6" cy="10.6" r="1.45" fill="#1e293b"/>
+            <circle cx="14.4" cy="10.6" r="1.45" fill="#1e293b"/>
+            <rect x="8.8" y="13.6" width="6.4" height="1.4" rx="0.7" fill="#334155"/>
+          </svg>
+        </span>
+        <span id="hud-wallet-coins">0</span>
+      </div>
+    </div>
+  </div>
+
+  <!-- Step 1: Name Entry Screen -->
+  <div id="name-screen" class="overlay">
+    <h1>ROBO DASH</h1>
+    <p class="subtitle">Step 1: Enter your name to join the arena</p>
+
+    <div class="wallet-pill">
+      <span class="robo-coin-icon" title="Silver Robo Coin">
+        <svg viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10.2" stroke="#64748b" stroke-width="1.2"/>
+          <line x1="12" y1="3.2" x2="12" y2="6.2" stroke="#334155" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="12" cy="2.8" r="1.4" fill="#475569"/>
+          <rect x="6" y="6.2" width="12" height="10.2" rx="2.4" fill="#94a3b8" stroke="#334155" stroke-width="1.5"/>
+          <line x1="6" y1="6.8" x2="18" y2="6.8" stroke="#f8fafc" stroke-width="0.9"/>
+          <rect x="4.2" y="9.2" width="1.8" height="4.2" rx="0.8" fill="#475569"/>
+          <rect x="18" y="9.2" width="1.8" height="4.2" rx="0.8" fill="#475569"/>
+          <circle cx="9.6" cy="10.6" r="1.45" fill="#1e293b"/>
+          <circle cx="14.4" cy="10.6" r="1.45" fill="#1e293b"/>
+          <rect x="8.8" y="13.6" width="6.4" height="1.4" rx="0.7" fill="#334155"/>
+        </svg>
+      </span>
+      <span>Your Robo Coins: <strong id="menu-coin-balance">0</strong></span>
+    </div>
+
+    <div id="remembered-note" class="remember-badge hidden"></div>
+    <div id="name-cooldown-note" class="cooldown-note hidden"></div>
+
+    <div class="input-group">
+      <label for="player-name-input">Your Challenger Name (Editable once every 7 days)</label>
+      <input type="text" id="player-name-input" maxlength="16" placeholder="Type your name..." autocomplete="off" />
+      <div id="name-error" class="error-msg"></div>
+    </div>
+
+    <div class="btn-row">
+      <button id="next-to-chars-btn" class="btn-primary">NEXT: PICK CHARACTER ➔</button>
+    </div>
+  </div>
+
+  <!-- Step 2: Character Selection & Unlock Shop Screen -->
+  <div id="char-screen" class="overlay hidden">
+    <h1>CHOOSE YOUR FIGHTER</h1>
+    <p id="welcome-greeting" class="subtitle">Welcome! Pick or unlock a character below.</p>
+
+    <div class="wallet-pill" style="margin-bottom: 12px;">
+      <span class="robo-coin-icon" title="Silver Robo Coin">
+        <svg viewBox="0 0 24 24" fill="none">
+          <circle cx="12" cy="12" r="10.2" stroke="#64748b" stroke-width="1.2"/>
+          <line x1="12" y1="3.2" x2="12" y2="6.2" stroke="#334155" stroke-width="1.8" stroke-linecap="round"/>
+          <circle cx="12" cy="2.8" r="1.4" fill="#475569"/>
+          <rect x="6" y="6.2" width="12" height="10.2" rx="2.4" fill="#94a3b8" stroke="#334155" stroke-width="1.5"/>
+          <line x1="6" y1="6.8" x2="18" y2="6.8" stroke="#f8fafc" stroke-width="0.9"/>
+          <rect x="4.2" y="9.2" width="1.8" height="4.2" rx="0.8" fill="#475569"/>
+          <rect x="18" y="9.2" width="1.8" height="4.2" rx="0.8" fill="#475569"/>
+          <circle cx="9.6" cy="10.6" r="1.45" fill="#1e293b"/>
+          <circle cx="14.4" cy="10.6" r="1.45" fill="#1e293b"/>
+          <rect x="8.8" y="13.6" width="6.4" height="1.4" rx="0.7" fill="#334155"/>
+        </svg>
+      </span>
+      <span>Robo Coins Available: <strong id="char-coin-balance">0</strong></span>
+    </div>
+
+    <div class="char-grid">
+      <!-- Starter Character: Scrap Scout (Free, 3 Hearts, 1 Jump) -->
+      <div class="char-card selected" data-char="scout">
+        <canvas class="char-preview" id="preview-scout" width="92" height="100"></canvas>
+        <div class="char-title">Scrap Scout</div>
+        <div class="char-stats">
+          ❤️❤️❤️ <strong>3 Hearts</strong><br />
+          ⬆️ <strong>1 Jump</strong>
+        </div>
+        <span class="badge" style="color:#34d399; border-color:rgba(52,211,153,0.45); background:rgba(52,211,153,0.18);">Starter Bot</span>
+        <button type="button" class="unlock-btn unlocked-tag" data-unlock-btn="scout">✓ FREE STARTER</button>
+      </div>
+
+      <!-- Character 2: Magma Golem (75 Robo Coins, 5 Hearts, 1 Jump) -->
+      <div class="char-card locked" data-char="golem">
+        <canvas class="char-preview" id="preview-golem" width="92" height="100"></canvas>
+        <div class="char-title">Magma Golem</div>
+        <div class="char-stats">
+          ❤️❤️❤️❤️❤️ <strong>5 Hearts</strong><br />
+          ⬆️ <strong>1 Jump</strong>
+        </div>
+        <span class="badge" style="color:#fb923c; border-color:rgba(251,146,60,0.45); background:rgba(251,146,60,0.18);">Crystal Titan</span>
+        <button type="button" class="unlock-btn" data-unlock-btn="golem">🔒 75 ROBO COINS</button>
+      </div>
+
+      <!-- Character 3: Shadow Lynx (100 Robo Coins, 3 Hearts, Double Jump) -->
+      <div class="char-card locked" data-char="ninja">
+        <canvas class="char-preview" id="preview-ninja" width="92" height="100"></canvas>
+        <div class="char-title">Shadow Lynx</div>
+        <div class="char-stats">
+          ❤️❤️❤️ <strong>3 Hearts</strong><br />
+          ⏫ <strong>Double Jump</strong>
+        </div>
+        <span class="badge" style="color:#38bdf8; border-color:rgba(56,189,248,0.45); background:rgba(56, 189, 248, 0.18);">Cyber Striker</span>
+        <button type="button" class="unlock-btn" data-unlock-btn="ninja">🔒 100 ROBO COINS</button>
+      </div>
+
+      <!-- Character 4: Aegis Warden (150 Robo Coins, 3 Hearts, 1 Jump, S/Down = 4s Shield w/ 20s Cooldown) -->
+      <div class="char-card locked" data-char="warden">
+        <canvas class="char-preview" id="preview-warden" width="92" height="100"></canvas>
+        <div class="char-title">Aegis Warden</div>
+        <div class="char-stats">
+          ❤️❤️❤️ <strong>3 Hearts</strong> &bull; ⬆️ <strong>1 Jump</strong><br />
+          🛡️ <strong>[S / ▼] 4s Shield</strong> (20s CD)
+        </div>
+        <span class="badge" style="color:#c4b5fd; border-color:rgba(167,139,250,0.45); background:rgba(167,139,250,0.2);">Bastion Sentinel</span>
+        <button type="button" class="unlock-btn" data-unlock-btn="warden">🔒 150 ROBO COINS</button>
+      </div>
+    </div>
+
+    <div id="char-shop-msg" class="error-msg" style="margin-bottom: 8px; min-height: 18px;"></div>
+
+    <div class="btn-row">
+      <button id="back-to-name-btn" class="btn-secondary">⬅ NAME SETTINGS</button>
+      <button id="start-btn" class="btn-primary">START ROBO DASH</button>
+    </div>
+    <div class="controls-hint">Move: <strong>A / D</strong> or <strong>◀ / ▶</strong> &nbsp;|&nbsp; Jump: <strong>W / Space / ▲</strong> &nbsp;|&nbsp; Shield Skill (Warden): <strong>S / ▼</strong></div>
+  </div>
+
+  <!-- Game Over Screen + Leaderboard -->
+  <div id="gameover-screen" class="overlay hidden">
+    <h1 style="background: linear-gradient(90deg, #f87171, #fb923c); -webkit-background-clip: text;">GAME OVER</h1>
+    <p id="gameover-summary" class="subtitle" style="font-size:1.02rem; color:#e2e8f0; margin-bottom:8px;"></p>
+
+    <div id="coin-reward-banner" class="coin-reward-banner"></div>
+
+    <div class="leaderboard-box">
+      <div class="leaderboard-header">
+        <span class="leaderboard-title">🏆 ROBO DASH LEADERBOARD (ALL RUNS SAVED)</span>
+        <span id="lb-save-status" class="leaderboard-timer-badge">♾️ Every Run Logged</span>
+      </div>
+
+      <!-- Filter Tabs -->
+      <div class="lb-filter-bar">
+        <button class="lb-filter-btn active" data-filter="both">⚔️ All Fighters</button>
+        <button class="lb-filter-btn" data-filter="Scrap Scout">🤖 Scrap Scout</button>
+        <button class="lb-filter-btn" data-filter="Magma Golem">🔥 Magma Golem</button>
+        <button class="lb-filter-btn" data-filter="Shadow Lynx">⚡ Shadow Lynx</button>
+        <button class="lb-filter-btn" data-filter="Aegis Warden">🛡️ Aegis Warden</button>
+        <button class="lb-filter-btn" data-filter="coins">
+          <span class="robo-coin-icon sm">
+            <svg viewBox="0 0 24 24" fill="none">
+              <circle cx="12" cy="12" r="10.2" stroke="#64748b" stroke-width="1.2"/>
+              <line x1="12" y1="3.2" x2="12" y2="6.2" stroke="#334155" stroke-width="1.8" stroke-linecap="round"/>
+              <circle cx="12" cy="2.8" r="1.4" fill="#475569"/>
+              <rect x="6" y="6.2" width="12" height="10.2" rx="2.4" fill="#94a3b8" stroke="#334155" stroke-width="1.5"/>
+              <line x1="6" y1="6.8" x2="18" y2="6.8" stroke="#f8fafc" stroke-width="0.9"/>
+              <rect x="4.2" y="9.2" width="1.8" height="4.2" rx="0.8" fill="#475569"/>
+              <rect x="18" y="9.2" width="1.8" height="4.2" rx="0.8" fill="#475569"/>
+              <circle cx="9.6" cy="10.6" r="1.45" fill="#1e293b"/>
+              <circle cx="14.4" cy="10.6" r="1.45" fill="#1e293b"/>
+              <rect x="8.8" y="13.6" width="6.4" height="1.4" rx="0.7" fill="#334155"/>
+            </svg>
+          </span>
+          Robo Coins
+        </button>
+      </div>
+
+      <div class="lb-columns-head">
+        <span>YOU / Rank &amp; Player</span>
+        <span id="lb-right-col-header">Run Time &nbsp;|&nbsp; Run Score</span>
+      </div>
+
+      <div id="leaderboard-list"></div>
+    </div>
+
+    <div class="btn-row">
+      <button id="change-char-btn" class="btn-secondary">SWITCH / UNLOCK FIGHTER</button>
+      <button id="restart-btn" class="btn-primary">PLAY AGAIN</button>
+    </div>
+  </div>
+
+  <!-- Touch Controls -->
+  <div id="touch-controls">
+    <div class="touch-group">
+      <button class="touch-btn" id="btn-left">◀</button>
+      <button class="touch-btn" id="btn-right">▶</button>
+    </div>
+    <div class="touch-group">
+      <button class="touch-btn hidden" id="btn-shield" style="border-color:#a78bfa; color:#ddd6fe;">🛡️</button>
+      <button class="touch-btn" id="btn-jump">▲</button>
+    </div>
+  </div>
+</div>
+
+<script>
+  const canvas = document.getElementById('gameCanvas');
+  const ctx = canvas.getContext('2d');
+
+  // Screens & UI Elements
+  const nameScreen = document.getElementById('name-screen');
+  const charScreen = document.getElementById('char-screen');
+  const gameoverScreen = document.getElementById('gameover-screen');
+  const hud = document.getElementById('hud');
+
+  const nameInput = document.getElementById('player-name-input');
+  const nameError = document.getElementById('name-error');
+  const rememberedNote = document.getElementById('remembered-note');
+  const nameCooldownNote = document.getElementById('name-cooldown-note');
+  const menuCoinBalance = document.getElementById('menu-coin-balance');
+  const charCoinBalance = document.getElementById('char-coin-balance');
+  const charShopMsg = document.getElementById('char-shop-msg');
+  const nextToCharsBtn = document.getElementById('next-to-chars-btn');
+  const backToNameBtn = document.getElementById('back-to-name-btn');
+  const welcomeGreeting = document.getElementById('welcome-greeting');
+  const startBtn = document.getElementById('start-btn');
+  const restartBtn = document.getElementById('restart-btn');
+  const changeCharBtn = document.getElementById('change-char-btn');
+  const charCards = document.querySelectorAll('.char-card');
+
+  const hudPlayerName = document.getElementById('hud-player-name');
+  const shieldIndicator = document.getElementById('shield-indicator');
+  const abilityIndicator = document.getElementById('ability-indicator');
+  const aimLockBanner = document.getElementById('aim-lock-banner');
+  const hudScore = document.getElementById('hud-score');
+  const hudTime = document.getElementById('hud-time');
+  const hudWalletCoins = document.getElementById('hud-wallet-coins');
+  const gameoverSummary = document.getElementById('gameover-summary');
+  const coinRewardBanner = document.getElementById('coin-reward-banner');
+  const leaderboardList = document.getElementById('leaderboard-list');
+  const lbSaveStatusEl = document.getElementById('lb-save-status');
+  const lbFilterBtns = document.querySelectorAll('.lb-filter-btn');
+  const lbRightColHeader = document.getElementById('lb-right-col-header');
+  const btnShieldTouch = document.getElementById('btn-shield');
+
+  // Character Definitions & Costs (Magma Golem = 75 Robo Coins)
+  const CHARACTER_CONFIGS = {
+    scout: {
+      key: 'scout',
+      label: 'Scrap Scout',
+      cost: 0,
+      hearts: 3,
+      jumps: 1,
+      speed: 730,
+      hasActiveShield: false
+    },
+    golem: {
+      key: 'golem',
+      label: 'Magma Golem',
+      cost: 75,
+      hearts: 5,
+      jumps: 1,
+      speed: 690,
+      hasActiveShield: false
+    },
+    ninja: {
+      key: 'ninja',
+      label: 'Shadow Lynx',
+      cost: 100,
+      hearts: 3,
+      jumps: 2,
+      speed: 790,
+      hasActiveShield: false
+    },
+    warden: {
+      key: 'warden',
+      label: 'Aegis Warden',
+      cost: 150,
+      hearts: 3,
+      jumps: 1,
+      speed: 740,
+      hasActiveShield: true
+    }
+  };
+
+  // Silver Robo Coin with Carved Robot Engraving SVG helper
+  const SILVER_COIN_SVG = `
+    <span class="robo-coin-icon sm" title="Silver Robo Coin">
+      <svg viewBox="0 0 24 24" fill="none">
+        <circle cx="12" cy="12" r="10.2" stroke="#64748b" stroke-width="1.2"/>
+        <line x1="12" y1="3.2" x2="12" y2="6.2" stroke="#334155" stroke-width="1.8" stroke-linecap="round"/>
+        <circle cx="12" cy="2.8" r="1.4" fill="#475569"/>
+        <rect x="6" y="6.2" width="12" height="10.2" rx="2.4" fill="#94a3b8" stroke="#334155" stroke-width="1.5"/>
+        <line x1="6" y1="6.8" x2="18" y2="6.8" stroke="#f8fafc" stroke-width="0.9"/>
+        <rect x="4.2" y="9.2" width="1.8" height="4.2" rx="0.8" fill="#475569"/>
+        <rect x="18" y="9.2" width="1.8" height="4.2" rx="0.8" fill="#475569"/>
+        <circle cx="9.6" cy="10.6" r="1.45" fill="#1e293b"/>
+        <circle cx="14.4" cy="10.6" r="1.45" fill="#1e293b"/>
+        <rect x="8.8" y="13.6" width="6.4" height="1.4" rx="0.7" fill="#334155"/>
+      </svg>
+    </span>
+  `;
+
+  // ==========================================
+  // STORAGE & ADMIN-ONLY RESET (NO UI BUTTONS)
+  // ==========================================
+  const DEVICE_ID_KEY = 'robodash_v6_device_id';
+  const SAVED_PROFILE_KEY = 'robodash_v6_profile';
+  const BOARD_STORAGE_KEY = 'robodash_v6_scores';
+  const RESET_EPOCH_KEY = 'robodash_reset_epoch_v6';
+  const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+  // Automatic reset executed now on load (only updates when you ask for a reset here)
+  (function runRequestedSeasonWipe() {
+    try {
+      if (!localStorage.getItem(RESET_EPOCH_KEY)) {
+        const keysToRemove = [];
+        for (let i = 0; i < localStorage.length; i++) {
+          const k = localStorage.key(i);
+          if (k && k.startsWith('robodash_')) {
+            keysToRemove.push(k);
+          }
+        }
+        keysToRemove.forEach(k => localStorage.removeItem(k));
+        localStorage.setItem(RESET_EPOCH_KEY, String(Date.now()));
+      }
+    } catch (e) {}
+  })();
+
+  function generateNewDeviceId() {
+    const id = 'dev_' + Date.now().toString(36) + '_' + Math.random().toString(36).slice(2, 10);
+    try {
+      localStorage.setItem(DEVICE_ID_KEY, id);
+    } catch (e) {}
+    return id;
+  }
+
+  function getOrCreateDeviceId() {
+    try {
+      let id = localStorage.getItem(DEVICE_ID_KEY);
+      if (!id) {
+        id = generateNewDeviceId();
+      }
+      return id;
+    } catch (e) {
+      return 'dev_session_' + Math.random().toString(36).slice(2, 10);
+    }
+  }
+
+  let DEVICE_ID = getOrCreateDeviceId();
+
+  function getDefaultProfile() {
+    return {
+      name: '',
+      char: 'scout',
+      unlockedChars: ['scout'],
+      lastNameChangeAt: 0,
+      roboCoins: 0
+    };
+  }
+
+  function loadSavedProfile() {
+    try {
+      const raw = localStorage.getItem(SAVED_PROFILE_KEY);
+      if (raw) {
+        const parsed = JSON.parse(raw);
+        const unlocked = Array.isArray(parsed.unlockedChars) ? parsed.unlockedChars : ['scout'];
+        if (!unlocked.includes('scout')) unlocked.unshift('scout');
+        return {
+          name: parsed.name || '',
+          char: CHARACTER_CONFIGS[parsed.char] ? parsed.char : 'scout',
+          unlockedChars: unlocked,
+          lastNameChangeAt: Number(parsed.lastNameChangeAt) || 0,
+          roboCoins: Math.max(0, Math.floor(Number(parsed.roboCoins) || 0))
+        };
+      }
+    } catch (e) {}
+    return getDefaultProfile();
+  }
+
+  let userProfile = loadSavedProfile();
+  let cachedGlobalBoard = [];
+
+  function saveAllData(profileObj, boardEntries) {
+    try {
+      localStorage.setItem(DEVICE_ID_KEY, DEVICE_ID);
+      localStorage.setItem(SAVED_PROFILE_KEY, JSON.stringify(profileObj));
+      localStorage.setItem(BOARD_STORAGE_KEY, JSON.stringify(boardEntries));
+    } catch (e) {}
+  }
+
+  function savePlayerProfile(profileObj) {
+    saveAllData(profileObj, cachedGlobalBoard.length ? cachedGlobalBoard : getLocalLeaderboardSync());
+  }
+
+  function isCharUnlocked(charKey) {
+    return charKey === 'scout' || userProfile.unlockedChars.includes(charKey);
+  }
+
+  function getRemainingNameCooldownMs() {
+    if (!userProfile.name || !userProfile.lastNameChangeAt) return 0;
+    const elapsed = Date.now() - userProfile.lastNameChangeAt;
+    return Math.max(0, ONE_WEEK_MS - elapsed);
+  }
+
+  function formatDurationRemaining(ms) {
+    const totalSecs = Math.ceil(ms / 1000);
+    const days = Math.floor(totalSecs / 86400);
+    const hours = Math.floor((totalSecs % 86400) / 3600);
+    const mins = Math.floor((totalSecs % 3600) / 60);
+    if (days > 0) return `${days}d ${hours}h ${mins}m`;
+    if (hours > 0) return `${hours}h ${mins}m`;
+    return `${mins}m`;
+  }
+
+  // Arena Constants
+  const FLOOR_Y = 882;
+  const GRAVITY = 3450;
+  const HIT_SHIELD_DURATION = 2.5;
+  const WARDEN_ABILITY_SHIELD_DURATION = 4.0;
+  const WARDEN_ABILITY_COOLDOWN = 20.0;
+
+  // ==========================================
+  // 14 DETAILED HOUSEHOLD & WORKSHOP ITEMS
+  // ==========================================
+  const HOUSE_ITEMS = [
+    { type: 'clock',     name: 'Alarm Clock',      scale: 0.78, radius: 14 },
+    { type: 'teapot',    name: 'Copper Kettle',    scale: 0.88, radius: 16 },
+    { type: 'books',     name: 'Encyclopedias',    scale: 0.94, radius: 18 },
+    { type: 'blender',   name: 'Smoothie Blender', scale: 0.98, radius: 18 },
+    { type: 'toaster',   name: 'Chrome Toaster',   scale: 1.02, radius: 19 },
+    { type: 'console',   name: 'Game Console',     scale: 1.05, radius: 20 },
+    { type: 'watering',  name: 'Watering Can',     scale: 1.08, radius: 20 },
+    { type: 'pan',       name: 'Cast-Iron Pan',    scale: 1.14, radius: 21 },
+    { type: 'trophy',    name: 'Champion Trophy',  scale: 1.18, radius: 22 },
+    { type: 'plant',     name: 'Potted Cactus',    scale: 1.24, radius: 23 },
+    { type: 'guitar',    name: 'Electric Guitar',  scale: 1.32, radius: 24 },
+    { type: 'microwave', name: 'Microwave Oven',   scale: 1.36, radius: 25 },
+    { type: 'lamp',      name: 'Vintage Lamp',     scale: 1.40, radius: 25 },
+    { type: 'tv',        name: 'Retro CRT TV',     scale: 1.54, radius: 28 }
+  ];
+
+  // State
+  let selectedChar = isCharUnlocked(userProfile.char) ? userProfile.char : 'scout';
+  let playerName = userProfile.name || '';
+  let gameRunning = false;
+  let lastTimestamp = 0;
+
+  let elapsedTime = 0;
+  let difficultyTimer = 0;
+  let difficultyTier = 1;
+  let score = 0;
+  let shakeTimer = 0;
+
+  // Every 10 seconds -> 1 second Precision Lock-On Timer
+  let precisionCycleTimer = 0;
+  let precisionLockRemaining = 0;
+
+  // Escalating barrage throw scheduler state
+  let nextThrowTimer = 0.65;
+  let activeRobotIndex = 0;
+
+  // Conveyor Belt Animation State
+  let beltOffset = 0;
+  let conveyorItems = [];
+  let conveyorSpawnTimer = 0;
+
+  // ==========================================
+  // LEADERBOARD FUNCTIONS
+  // - Score Tabs: Infinite run entries per player
+  // - Robo Coins Tab: Strictly 1 entry per player
+  // ==========================================
+  let currentRunEntry = null;
+  let currentLbFilter = 'both';
+
+  const VALID_CHAR_LABELS = new Set(['Scrap Scout', 'Magma Golem', 'Shadow Lynx', 'Aegis Warden']);
+
+  function sanitizeRealEntries(list) {
+    if (!Array.isArray(list)) return [];
+    return list.filter(item =>
+      item &&
+      typeof item.name === 'string' &&
+      item.name.trim().length > 0 &&
+      typeof item.score === 'number' &&
+      !Number.isNaN(item.score) &&
+      VALID_CHAR_LABELS.has(item.char)
+    );
+  }
+
+  function normalizeLeaderboardRuns(list) {
+    const clean = sanitizeRealEntries(list);
+    const seenIds = new Set();
+    const allRuns = [];
+
+    clean.forEach((entry, index) => {
+      const runId = entry.id && !entry.id.startsWith(DEVICE_ID + '_')
+        ? entry.id
+        : `${entry.deviceId || 'run'}_${entry.updatedAt || Date.now()}_${index}`;
+
+      if (!seenIds.has(runId)) {
+        seenIds.add(runId);
+        const copy = { ...entry, id: runId };
+        if (userProfile.name && copy.deviceId === DEVICE_ID) {
+          copy.name = userProfile.name;
+          copy.totalCoins = userProfile.roboCoins;
+        }
+        allRuns.push(copy);
+      }
+    });
+
+    allRuns.sort((a, b) => b.score - a.score);
+    return allRuns;
+  }
+
+  function getLocalLeaderboardSync() {
+    try {
+      const raw = localStorage.getItem(BOARD_STORAGE_KEY);
+      if (raw) {
+        return normalizeLeaderboardRuns(JSON.parse(raw));
+      }
+    } catch (e) {}
+    return [];
+  }
+
+  cachedGlobalBoard = getLocalLeaderboardSync();
+
+  function propagateNameChangeToLeaderboard(newName, newTotalCoins) {
+    const now = Date.now();
+    let merged = normalizeLeaderboardRuns([...getLocalLeaderboardSync(), ...cachedGlobalBoard]);
+
+    merged.forEach(entry => {
+      if (entry.deviceId === DEVICE_ID) {
+        entry.name = newName;
+        entry.totalCoins = newTotalCoins;
+        entry.updatedAt = now;
+      }
+    });
+
+    merged = normalizeLeaderboardRuns(merged);
+    cachedGlobalBoard = merged;
+    saveAllData(userProfile, merged);
+  }
+
+  function submitAndRenderLeaderboard(newEntry) {
+    const uniqueRunEntry = {
+      ...newEntry,
+      id: `${DEVICE_ID}_run_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`
+    };
+    currentRunEntry = uniqueRunEntry;
+
+    let merged = normalizeLeaderboardRuns([
+      ...getLocalLeaderboardSync(),
+      ...cachedGlobalBoard,
+      uniqueRunEntry
+    ]);
+
+    cachedGlobalBoard = merged;
+    saveAllData(userProfile, merged);
+
+    lbSaveStatusEl.textContent = '♾️ Every Run Logged';
+    renderFilteredLeaderboard();
+  }
+
+  function getCharPillClass(charLabel) {
+    if (charLabel === 'Magma Golem') return 'golem';
+    if (charLabel === 'Shadow Lynx') return 'lynx';
+    if (charLabel === 'Aegis Warden') return 'warden';
+    return 'scout';
+  }
+
+  function renderFilteredLeaderboard() {
+    leaderboardList.innerHTML = '';
+
+    // Robo Coins tab: your name appears ONLY ONCE
+    if (currentLbFilter === 'coins') {
+      lbRightColHeader.textContent = 'Current Robo Coins';
+
+      const playerCoinMap = new Map();
+
+      if (userProfile.name) {
+        playerCoinMap.set(DEVICE_ID, {
+          deviceId: DEVICE_ID,
+          name: userProfile.name,
+          currentCoins: userProfile.roboCoins
+        });
+      }
+
+      cachedGlobalBoard.forEach(entry => {
+        if (entry.deviceId === DEVICE_ID) return;
+        const key = entry.deviceId || `name_${entry.name.trim().toLowerCase()}`;
+        const latestCoins = Number(entry.totalCoins) || 0;
+        if (!playerCoinMap.has(key)) {
+          playerCoinMap.set(key, {
+            deviceId: entry.deviceId,
+            name: entry.name,
+            currentCoins: latestCoins,
+            updatedAt: entry.updatedAt || 0
+          });
+        } else {
+          const rec = playerCoinMap.get(key);
+          if ((entry.updatedAt || 0) >= (rec.updatedAt || 0)) {
+            rec.name = entry.name;
+            rec.currentCoins = latestCoins;
+            rec.updatedAt = entry.updatedAt || 0;
+          }
+        }
+      });
+
+      const coinRanking = Array.from(playerCoinMap.values()).sort((a, b) => b.currentCoins - a.currentCoins);
+
+      if (coinRanking.length === 0) {
+        leaderboardList.innerHTML = `<div style="padding:18px; color:#94a3b8; font-size:0.9rem;">No Robo Coins in your wallet yet. Score 100+ points to earn silver Robo Coins!</div>`;
+        return;
+      }
+
+      coinRanking.forEach((playerRec, idx) => {
+        const rank = idx + 1;
+        const isThisDevice = playerRec.deviceId === DEVICE_ID;
+
+        const row = document.createElement('div');
+        row.className = 'lb-row' + (isThisDevice ? ' device-you latest-run' : '');
+
+        let rankBadge = `#${rank}`;
+        let rankClass = 'lb-rank';
+        if (rank === 1) { rankBadge = '👑 #1'; rankClass += ' top-1'; }
+        else if (rank === 2) { rankBadge = '🥈 #2'; rankClass += ' top-2'; }
+        else if (rank === 3) { rankBadge = '🥉 #3'; rankClass += ' top-3'; }
+
+        const leftYouBadge = isThisDevice ? `<span class="lb-you-tag" title="Your current Robo Coins">YOU</span>` : '';
+
+        row.innerHTML = `
+          <div class="lb-left-col">
+            ${leftYouBadge}
+            <span class="${rankClass}">${rankBadge}</span>
+            <span class="lb-name">${escapeHtml(playerRec.name)}</span>
+          </div>
+          <div class="lb-stats-right">
+            <span class="lb-coin-val">${SILVER_COIN_SVG} ${playerRec.currentCoins.toLocaleString()}</span>
+          </div>
+        `;
+        leaderboardList.appendChild(row);
+      });
+      return;
+    }
+
+    // Score leaderboards: show every single round infinitely
+    lbRightColHeader.textContent = 'Run Time  |  Run Score';
+
+    const filtered = cachedGlobalBoard
+      .filter(entry => currentLbFilter === 'both' || entry.char === currentLbFilter)
+      .sort((a, b) => b.score - a.score);
+
+    if (filtered.length === 0) {
+      leaderboardList.innerHTML = `<div style="padding:18px; color:#94a3b8; font-size:0.9rem;">No scores yet for ${escapeHtml(currentLbFilter)}. Play a round to claim #1!</div>`;
+      return;
+    }
+
+    filtered.forEach((entry, idx) => {
+      const rank = idx + 1;
+      const isThisDevice = entry.deviceId === DEVICE_ID;
+      const isLatestRun = currentRunEntry && entry.id === currentRunEntry.id;
+
+      const row = document.createElement('div');
+      row.className = 'lb-row' + (isLatestRun ? ' latest-run' : (isThisDevice ? ' device-you' : ''));
+
+      let rankBadge = `#${rank}`;
+      let rankClass = 'lb-rank';
+      if (rank === 1) { rankBadge = '👑 #1'; rankClass += ' top-1'; }
+      else if (rank === 2) { rankBadge = '🥈 #2'; rankClass += ' top-2'; }
+      else if (rank === 3) { rankBadge = '🥉 #3'; rankClass += ' top-3'; }
+
+      const pillClass = getCharPillClass(entry.char);
+      const timeText = entry.time || '--';
+      const leftYouBadge = isThisDevice
+        ? `<span class="lb-you-tag" title="Your run">${isLatestRun ? 'NEW' : 'YOU'}</span>`
+        : '';
+
+      row.innerHTML = `
+        <div class="lb-left-col">
+          ${leftYouBadge}
+          <span class="${rankClass}">${rankBadge}</span>
+          <span class="lb-name">
+            ${escapeHtml(entry.name)}
+            <span class="lb-char-pill ${pillClass}">${escapeHtml(entry.char)}</span>
+          </span>
+        </div>
+        <div class="lb-stats-right">
+          <span class="lb-time-val">${escapeHtml(timeText)}</span>
+          <span class="lb-score">${Number(entry.score).toLocaleString()} pts</span>
+        </div>
+      `;
+      leaderboardList.appendChild(row);
+    });
+  }
+
+  lbFilterBtns.forEach(btn => {
+    btn.addEventListener('click', () => {
+      lbFilterBtns.forEach(b => b.classList.remove('active'));
+      btn.classList.add('active');
+      currentLbFilter = btn.dataset.filter;
+      renderFilteredLeaderboard();
+    });
+  });
+
+  function escapeHtml(str) {
+    return String(str).replace(/[&<>"']/g, m => ({
+      '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;'
+    }[m]));
+  }
+
+  // Pre-rendered Offscreen Pixel-Art Background Canvas
+  const pixelBgCanvas = document.createElement('canvas');
+  pixelBgCanvas.width = canvas.width;
+  pixelBgCanvas.height = canvas.height;
+
+  function buildPixelBackground() {
+    const pSize = 6;
+    const lw = Math.ceil(canvas.width / pSize);
+    const lh = Math.ceil(canvas.height / pSize);
+
+    const lowCanvas = document.createElement('canvas');
+    lowCanvas.width = lw;
+    lowCanvas.height = lh;
+    const lctx = lowCanvas.getContext('2d');
+    lctx.imageSmoothingEnabled = false;
+
+    const floorPixelY = Math.floor(FLOOR_Y / pSize);
+
+    const wallBands = [
+      { y: 0, h: 30, color: '#070b19' },
+      { y: 30, h: 32, color: '#0b1226' },
+      { y: 62, h: 34, color: '#101935' },
+      { y: 96, h: 30, color: '#152244' },
+      { y: 126, h: floorPixelY - 126, color: '#1b2b52' }
+    ];
+    wallBands.forEach(b => {
+      lctx.fillStyle = b.color;
+      lctx.fillRect(0, b.y, lw, b.h);
+    });
+
+    lctx.fillStyle = '#152244';
+    for (let x = 0; x < lw; x += 2) {
+      lctx.fillRect(x, 126, 1, 1);
+      lctx.fillRect(x + 1, 127, 1, 1);
+    }
+
+    const starPositions = [
+      [30, 14], [70, 22], [110, 11], [162, 19], [214, 13], [254, 23],
+      [50, 38], [138, 35], [192, 41], [238, 32], [90, 18], [178, 26]
+    ];
+    starPositions.forEach(([sx, sy], idx) => {
+      lctx.fillStyle = idx % 2 === 0 ? '#38bdf8' : '#a5f3fc';
+      lctx.fillRect(sx, sy, 1, 1);
+      if (idx % 3 === 0) {
+        lctx.fillStyle = 'rgba(56, 189, 248, 0.45)';
+        lctx.fillRect(sx - 1, sy, 3, 1);
+        lctx.fillRect(sx, sy - 1, 1, 3);
+      }
+    });
+
+    for (let wx = 44; wx <= 220; wx += 56) {
+      const wy = 22;
+      const ww = 30;
+      const wh = 52;
+
+      lctx.fillStyle = '#090e1d';
+      lctx.fillRect(wx - 1, wy - 1, ww + 2, wh + 2);
+
+      lctx.fillStyle = '#132a4a';
+      lctx.fillRect(wx, wy, ww, wh);
+
+      lctx.fillStyle = '#1e4273';
+      for (let d = 0; d < 14; d++) {
+        lctx.fillRect(wx + 4 + d, wy + 16 - d, 2, 1);
+        lctx.fillRect(wx + 10 + d, wy + 28 - d, 2, 1);
+      }
+
+      lctx.fillStyle = '#0b132b';
+      lctx.fillRect(wx + 14, wy, 2, wh);
+      lctx.fillRect(wx, wy + 17, ww, 2);
+      lctx.fillRect(wx, wy + 35, ww, 2);
+
+      lctx.fillStyle = '#334155';
+      lctx.fillRect(wx - 1, wy + wh, ww + 2, 2);
+    }
+
+    for (let py = 82; py < floorPixelY; py += 12) {
+      lctx.fillStyle = '#0d152b';
+      lctx.fillRect(0, py, lw, 1);
+      const offset = (py / 12) % 2 === 0 ? 0 : 12;
+      for (let px = offset; px < lw; px += 24) {
+        lctx.fillStyle = '#0d152b';
+        lctx.fillRect(px, py, 1, 12);
+        lctx.fillStyle = '#253969';
+        lctx.fillRect(px + 1, py + 1, 22, 1);
+        lctx.fillStyle = '#3b5594';
+        lctx.fillRect(px + 2, py + 2, 1, 1);
+        lctx.fillRect(px + 21, py + 2, 1, 1);
+      }
+    }
+
+    const floorH = lh - floorPixelY;
+    lctx.fillStyle = '#0f172a';
+    lctx.fillRect(0, floorPixelY, lw, floorH);
+
+    lctx.fillStyle = '#38bdf8';
+    lctx.fillRect(0, floorPixelY, lw, 1);
+    lctx.fillStyle = '#0284c7';
+    lctx.fillRect(0, floorPixelY + 1, lw, 1);
+
+    for (let hx = 0; hx < lw; hx += 8) {
+      lctx.fillStyle = '#eab308';
+      lctx.fillRect(hx, floorPixelY + 2, 4, 1);
+      lctx.fillRect(hx - 1, floorPixelY + 3, 4, 1);
+      lctx.fillStyle = '#1e293b';
+      lctx.fillRect(hx + 4, floorPixelY + 2, 4, 1);
+      lctx.fillRect(hx + 3, floorPixelY + 3, 4, 1);
+    }
+
+    for (let fy = floorPixelY + 4; fy < lh; fy += 4) {
+      for (let fx = 0; fx < lw; fx += 8) {
+        const shift = ((fy - floorPixelY) / 4) % 2 === 0 ? 0 : 4;
+        lctx.fillStyle = '#1e293b';
+        lctx.fillRect(fx + shift, fy, 7, 3);
+        lctx.fillStyle = '#334155';
+        lctx.fillRect(fx + shift, fy, 7, 1);
+      }
+    }
+
+    const pctx = pixelBgCanvas.getContext('2d');
+    pctx.imageSmoothingEnabled = false;
+    pctx.clearRect(0, 0, pixelBgCanvas.width, pixelBgCanvas.height);
+    pctx.drawImage(lowCanvas, 0, 0, pixelBgCanvas.width, pixelBgCanvas.height);
+  }
+  buildPixelBackground();
+
+  // Player Object (+13% Higher Jump Height: -1228 * sqrt(1.13) = -1305)
+  const player = {
+    x: canvas.width / 2,
+    y: FLOOR_Y - 64,
+    w: 46,
+    h: 64,
+    vx: 0,
+    vy: 0,
+    maxSpeed: 730,
+    accel: 16500,
+    friction: 18500,
+    jumpForce: -1305,
+    fallMultiplier: 1.32,
+    maxHearts: 3,
+    hearts: 3,
+    maxJumps: 1,
+    jumpsRemaining: 1,
+    grounded: true,
+    coyoteTimer: 0,
+    jumpBufferTimer: 0,
+    jumpHeld: false,
+    shieldTimer: 0,
+    shieldCooldownTimer: 0,
+    walkCycle: 0,
+    facing: 1,
+    squashX: 1,
+    squashY: 1
+  };
+
+  // Elevated Platforms
+  const platforms = [
+    { x: 0, y: 462, w: 265, h: 32 },
+    { x: canvas.width - 265, y: 462, w: 265, h: 32 }
+  ];
+
+  // Robots with Supply Crates Behind Them + Smooth Multi-Stage Reach & Throw Animation
+  const robots = [
+    {
+      side: 'left',
+      x: 175,
+      y: 462,
+      crateX: 64,
+      animPhase: 'idle',
+      animT: 0,
+      exactTargetQueued: false,
+      heldItem: null,
+      crateLidOpen: 0,
+      recoil: 0
+    },
+    {
+      side: 'right',
+      x: canvas.width - 175,
+      y: 462,
+      crateX: canvas.width - 64,
+      animPhase: 'idle',
+      animT: 0,
+      exactTargetQueued: false,
+      heldItem: null,
+      crateLidOpen: 0,
+      recoil: 0
+    }
+  ];
+
+  let projectiles = [];
+  let particles = [];
+
+  // Input State
+  const keys = { left: false, right: false };
+
+  // ==========================================
+  // HIGHLY DETAILED ITEMS RENDERER (14 ITEMS!)
+  // ==========================================
+  function drawItemGraphic(targetCtx, type, scale = 1) {
+    targetCtx.save();
+    targetCtx.scale(scale, scale);
+
+    switch (type) {
+      case 'toaster': {
+        targetCtx.fillStyle = '#92400e';
+        targetCtx.beginPath();
+        targetCtx.roundRect(-14, -23, 12, 14, 4);
+        targetCtx.roundRect(2, -23, 12, 14, 4);
+        targetCtx.fill();
+        targetCtx.fillStyle = '#fbbf24';
+        targetCtx.beginPath();
+        targetCtx.roundRect(-12, -21, 8, 10, 2);
+        targetCtx.roundRect(4, -21, 8, 10, 2);
+        targetCtx.fill();
+
+        const grad = targetCtx.createLinearGradient(-19, -12, 19, 15);
+        grad.addColorStop(0, '#ffffff');
+        grad.addColorStop(0.45, '#cbd5e1');
+        grad.addColorStop(1, '#475569');
+        targetCtx.fillStyle = grad;
+        targetCtx.strokeStyle = '#0f172a';
+        targetCtx.lineWidth = 2.2;
+        targetCtx.beginPath();
+        targetCtx.roundRect(-19, -12, 38, 27, 7);
+        targetCtx.fill();
+        targetCtx.stroke();
+
+        targetCtx.fillStyle = 'rgba(255,255,255,0.65)';
+        targetCtx.fillRect(-14, -8, 28, 3);
+
+        targetCtx.fillStyle = '#1e293b';
+        targetCtx.beginPath();
+        targetCtx.arc(-9, 5, 4, 0, Math.PI * 2);
+        targetCtx.fill();
+        targetCtx.fillStyle = '#ef4444';
+        targetCtx.fillRect(18, -3, 5, 7);
+        break;
+      }
+
+      case 'lamp': {
+        targetCtx.fillStyle = '#d97706';
+        targetCtx.strokeStyle = '#451a03';
+        targetCtx.lineWidth = 2;
+        targetCtx.beginPath();
+        targetCtx.roundRect(-11, 12, 22, 6, 3);
+        targetCtx.fill();
+        targetCtx.stroke();
+        targetCtx.fillRect(-3, 0, 6, 12);
+
+        const shadeGrad = targetCtx.createLinearGradient(0, -19, 0, 2);
+        shadeGrad.addColorStop(0, '#fef08a');
+        shadeGrad.addColorStop(0.6, '#f59e0b');
+        shadeGrad.addColorStop(1, '#ea580c');
+        targetCtx.fillStyle = shadeGrad;
+        targetCtx.beginPath();
+        targetCtx.moveTo(-11, -19);
+        targetCtx.lineTo(11, -19);
+        targetCtx.lineTo(19, 2);
+        targetCtx.lineTo(-19, 2);
+        targetCtx.closePath();
+        targetCtx.fill();
+        targetCtx.stroke();
+
+        targetCtx.strokeStyle = 'rgba(120, 53, 15, 0.45)';
+        targetCtx.lineWidth = 1.4;
+        targetCtx.beginPath();
+        targetCtx.moveTo(-5, -19); targetCtx.lineTo(-8, 2);
+        targetCtx.moveTo(0, -19);  targetCtx.lineTo(0, 2);
+        targetCtx.moveTo(5, -19);  targetCtx.lineTo(8, 2);
+        targetCtx.stroke();
+
+        targetCtx.strokeStyle = '#fde047';
+        targetCtx.beginPath();
+        targetCtx.moveTo(8, 2); targetCtx.lineTo(8, 9);
+        targetCtx.stroke();
+        break;
+      }
+
+      case 'plant': {
+        targetCtx.fillStyle = '#ea580c';
+        targetCtx.strokeStyle = '#7c2d12';
+        targetCtx.lineWidth = 2;
+        targetCtx.beginPath();
+        targetCtx.moveTo(-14, 2);
+        targetCtx.lineTo(14, 2);
+        targetCtx.lineTo(10, 18);
+        targetCtx.lineTo(-10, 18);
+        targetCtx.closePath();
+        targetCtx.fill();
+        targetCtx.stroke();
+        targetCtx.fillStyle = '#f97316';
+        targetCtx.fillRect(-16, -2, 32, 5);
+        targetCtx.strokeRect(-16, -2, 32, 5);
+
+        targetCtx.fillStyle = '#16a34a';
+        targetCtx.strokeStyle = '#14532d';
+        targetCtx.beginPath();
+        targetCtx.roundRect(-7, -21, 14, 20, 7);
+        targetCtx.roundRect(-16, -13, 10, 6, 3);
+        targetCtx.roundRect(6, -15, 10, 6, 3);
+        targetCtx.fill();
+        targetCtx.stroke();
+
+        targetCtx.strokeStyle = '#86efac';
+        targetCtx.lineWidth = 1.2;
+        targetCtx.beginPath();
+        targetCtx.moveTo(0, -19); targetCtx.lineTo(0, -3);
+        targetCtx.stroke();
+
+        targetCtx.fillStyle = '#f43f5e';
+        targetCtx.beginPath();
+        targetCtx.arc(0, -23, 4.5, 0, Math.PI * 2);
+        targetCtx.fill();
+        targetCtx.fillStyle = '#facc15';
+        targetCtx.beginPath();
+        targetCtx.arc(0, -23, 1.8, 0, Math.PI * 2);
+        targetCtx.fill();
+        break;
+      }
+
+      case 'clock': {
+        targetCtx.fillStyle = '#facc15';
+        targetCtx.strokeStyle = '#713f12';
+        targetCtx.lineWidth = 2;
+        targetCtx.beginPath();
+        targetCtx.arc(-13, -14, 6.5, 0, Math.PI * 2);
+        targetCtx.arc(13, -14, 6.5, 0, Math.PI * 2);
+        targetCtx.fill();
+        targetCtx.stroke();
+        targetCtx.fillRect(-2, -21, 4, 6);
+
+        targetCtx.fillStyle = '#dc2626';
+        targetCtx.beginPath();
+        targetCtx.arc(0, 0, 17, 0, Math.PI * 2);
+        targetCtx.fill();
+        targetCtx.stroke();
+
+        targetCtx.fillStyle = '#ffffff';
+        targetCtx.beginPath();
+        targetCtx.arc(0, 0, 12.5, 0, Math.PI * 2);
+        targetCtx.fill();
+
+        targetCtx.strokeStyle = '#0f172a';
+        targetCtx.lineWidth = 2.2;
+        targetCtx.beginPath();
+        targetCtx.moveTo(0, 0); targetCtx.lineTo(0, -9);
+        targetCtx.moveTo(0, 0); targetCtx.lineTo(7, 3);
+        targetCtx.stroke();
+        targetCtx.fillStyle = '#ef4444';
+        targetCtx.beginPath();
+        targetCtx.arc(0, 0, 2, 0, Math.PI * 2);
+        targetCtx.fill();
+        break;
+      }
+
+      case 'pan': {
+        targetCtx.fillStyle = '#475569';
+        targetCtx.strokeStyle = '#0f172a';
+        targetCtx.lineWidth = 2;
+        targetCtx.beginPath();
+        targetCtx.roundRect(10, -3.5, 19, 7, 3.5);
+        targetCtx.fill();
+        targetCtx.stroke();
+
+        targetCtx.fillStyle = '#1e293b';
+        targetCtx.beginPath();
+        targetCtx.arc(-5, 0, 16.5, 0, Math.PI * 2);
+        targetCtx.fill();
+        targetCtx.stroke();
+        targetCtx.strokeStyle = '#475569';
+        targetCtx.lineWidth = 1.5;
+        targetCtx.beginPath();
+        targetCtx.arc(-5, 0, 13, 0, Math.PI * 2);
+        targetCtx.stroke();
+
+        targetCtx.fillStyle = '#ffffff';
+        targetCtx.beginPath();
+        targetCtx.arc(-5, 0, 9.5, 0, Math.PI * 2);
+        targetCtx.fill();
+        targetCtx.fillStyle = '#facc15';
+        targetCtx.beginPath();
+        targetCtx.arc(-4, 1, 4.3, 0, Math.PI * 2);
+        targetCtx.fill();
+        targetCtx.fillStyle = '#fef08a';
+        targetCtx.beginPath();
+        targetCtx.arc(-5.5, -0.5, 1.5, 0, Math.PI * 2);
+        targetCtx.fill();
+        break;
+      }
+
+      case 'tv': {
+        targetCtx.strokeStyle = '#e2e8f0';
+        targetCtx.lineWidth = 2.5;
+        targetCtx.beginPath();
+        targetCtx.moveTo(-4, -14); targetCtx.lineTo(-13, -25);
+        targetCtx.moveTo(4, -14);  targetCtx.lineTo(13, -25);
+        targetCtx.stroke();
+
+        targetCtx.fillStyle = '#b45309';
+        targetCtx.strokeStyle = '#451a03';
+        targetCtx.lineWidth = 2.2;
+        targetCtx.beginPath();
+        targetCtx.roundRect(-20, -14, 40, 28, 6);
+        targetCtx.fill();
+        targetCtx.stroke();
+
+        const crtGrad = targetCtx.createLinearGradient(-15, -10, 9, 10);
+        crtGrad.addColorStop(0, '#7dd3fc');
+        crtGrad.addColorStop(1, '#0284c7');
+        targetCtx.fillStyle = crtGrad;
+        targetCtx.beginPath();
+        targetCtx.roundRect(-15, -10, 24, 20, 4);
+        targetCtx.fill();
+
+        targetCtx.fillStyle = 'rgba(255,255,255,0.55)';
+        targetCtx.beginPath();
+        targetCtx.ellipse(-8, -5, 4, 2, -0.4, 0, Math.PI * 2);
+        targetCtx.fill();
+
+        targetCtx.fillStyle = '#f8fafc';
+        targetCtx.beginPath();
+        targetCtx.arc(14, -5, 2.6, 0, Math.PI * 2);
+        targetCtx.arc(14, 2, 2.6, 0, Math.PI * 2);
+        targetCtx.fill();
+        targetCtx.fillStyle = '#451a03';
+        targetCtx.fillRect(11, 7, 6, 3);
+        break;
+      }
+
+      case 'teapot': {
+        targetCtx.strokeStyle = '#92400e';
+        targetCtx.lineWidth = 4;
+        targetCtx.beginPath();
+        targetCtx.arc(-14, 0, 8, Math.PI * 0.5, Math.PI * 1.5);
+        targetCtx.stroke();
+
+        targetCtx.strokeStyle = '#d97706';
+        targetCtx.lineWidth = 4.5;
+        targetCtx.beginPath();
+        targetCtx.moveTo(12, 4); targetCtx.lineTo(22, -7);
+        targetCtx.stroke();
+
+        const kGrad = targetCtx.createLinearGradient(-16, -12, 16, 13);
+        kGrad.addColorStop(0, '#fdba74');
+        kGrad.addColorStop(0.5, '#ea580c');
+        kGrad.addColorStop(1, '#9a3412');
+        targetCtx.fillStyle = kGrad;
+        targetCtx.strokeStyle = '#431407';
+        targetCtx.lineWidth = 2;
+        targetCtx.beginPath();
+        targetCtx.arc(0, 2, 15, Math.PI, 0);
+        targetCtx.lineTo(17, 13);
+        targetCtx.lineTo(-17, 13);
+        targetCtx.closePath();
+        targetCtx.fill();
+        targetCtx.stroke();
+
+        targetCtx.fillStyle = '#1e293b';
+        targetCtx.beginPath();
+        targetCtx.arc(0, -14, 3, 0, Math.PI * 2);
+        targetCtx.fill();
+        break;
+      }
+
+      case 'books': {
+        const colors = ['#ef4444', '#2563eb', '#10b981'];
+        for (let b = 0; b < 3; b++) {
+          const by = -14 + b * 9.5;
+          targetCtx.fillStyle = colors[b];
+          targetCtx.strokeStyle = '#0f172a';
+          targetCtx.lineWidth = 1.8;
+          targetCtx.beginPath();
+          targetCtx.roundRect(-18, by, 36, 8.5, 2.5);
+          targetCtx.fill();
+          targetCtx.stroke();
+          targetCtx.fillStyle = '#fef9c3';
+          targetCtx.fillRect(-13, by + 2, 27, 4.5);
+          targetCtx.fillStyle = '#facc15';
+          targetCtx.fillRect(-16, by + 1.5, 2, 5.5);
+        }
+        break;
+      }
+
+      case 'microwave': {
+        targetCtx.fillStyle = '#e2e8f0';
+        targetCtx.strokeStyle = '#1e293b';
+        targetCtx.lineWidth = 2.2;
+        targetCtx.beginPath();
+        targetCtx.roundRect(-20, -13, 40, 26, 4);
+        targetCtx.fill();
+        targetCtx.stroke();
+
+        targetCtx.fillStyle = '#0f172a';
+        targetCtx.beginPath();
+        targetCtx.roundRect(-16, -9, 23, 18, 3);
+        targetCtx.fill();
+
+        targetCtx.fillStyle = '#facc15';
+        targetCtx.beginPath();
+        targetCtx.arc(-4.5, 2, 4.5, 0, Math.PI * 2);
+        targetCtx.fill();
+
+        targetCtx.fillStyle = '#10b981';
+        targetCtx.fillRect(10, -8, 7, 4);
+        targetCtx.fillStyle = '#64748b';
+        targetCtx.fillRect(10, -2, 7, 10);
+        break;
+      }
+
+      case 'blender': {
+        targetCtx.fillStyle = '#ef4444';
+        targetCtx.strokeStyle = '#7f1d1d';
+        targetCtx.lineWidth = 2;
+        targetCtx.beginPath();
+        targetCtx.roundRect(-11, 5, 22, 13, 4);
+        targetCtx.fill();
+        targetCtx.stroke();
+
+        targetCtx.fillStyle = 'rgba(224, 242, 254, 0.85)';
+        targetCtx.strokeStyle = '#0284c7';
+        targetCtx.beginPath();
+        targetCtx.moveTo(-12, -16);
+        targetCtx.lineTo(12, -16);
+        targetCtx.lineTo(9, 5);
+        targetCtx.lineTo(-9, 5);
+        targetCtx.closePath();
+        targetCtx.fill();
+        targetCtx.stroke();
+
+        targetCtx.fillStyle = '#ec4899';
+        targetCtx.beginPath();
+        targetCtx.moveTo(-10, -8);
+        targetCtx.lineTo(10, -8);
+        targetCtx.lineTo(8, 4);
+        targetCtx.lineTo(-8, 4);
+        targetCtx.closePath();
+        targetCtx.fill();
+
+        targetCtx.fillStyle = '#1e293b';
+        targetCtx.fillRect(-13, -19, 26, 4);
+        break;
+      }
+
+      case 'console': {
+        targetCtx.fillStyle = '#1e293b';
+        targetCtx.strokeStyle = '#38bdf8';
+        targetCtx.lineWidth = 2;
+        targetCtx.beginPath();
+        targetCtx.roundRect(-19, -11, 38, 22, 5);
+        targetCtx.fill();
+        targetCtx.stroke();
+
+        targetCtx.fillStyle = '#38bdf8';
+        targetCtx.fillRect(-15, -3, 30, 3);
+
+        targetCtx.fillStyle = '#34d399';
+        targetCtx.beginPath();
+        targetCtx.arc(-12, 5, 2.3, 0, Math.PI * 2);
+        targetCtx.fill();
+        targetCtx.fillStyle = '#f43f5e';
+        targetCtx.beginPath();
+        targetCtx.arc(-5, 5, 2.3, 0, Math.PI * 2);
+        targetCtx.fill();
+        break;
+      }
+
+      case 'guitar': {
+        targetCtx.save();
+        targetCtx.rotate(-0.45);
+        targetCtx.fillStyle = '#dc2626';
+        targetCtx.strokeStyle = '#450a0a';
+        targetCtx.lineWidth = 2;
+        targetCtx.beginPath();
+        targetCtx.ellipse(-7, 2, 12, 9, 0, 0, Math.PI * 2);
+        targetCtx.fill();
+        targetCtx.stroke();
+
+        targetCtx.fillStyle = '#f8fafc';
+        targetCtx.beginPath();
+        targetCtx.ellipse(-5, 4, 6, 4, 0, 0, Math.PI * 2);
+        targetCtx.fill();
+
+        targetCtx.fillStyle = '#92400e';
+        targetCtx.fillRect(3, -2, 18, 4);
+        targetCtx.fillStyle = '#dc2626';
+        targetCtx.fillRect(20, -3.5, 5, 7);
+        targetCtx.restore();
+        break;
+      }
+
+      case 'trophy': {
+        targetCtx.strokeStyle = '#f59e0b';
+        targetCtx.lineWidth = 2.6;
+        targetCtx.beginPath();
+        targetCtx.arc(-11, -7, 6, Math.PI * 0.5, Math.PI * 1.5);
+        targetCtx.stroke();
+        targetCtx.beginPath();
+        targetCtx.arc(11, -7, 6, -Math.PI * 0.5, Math.PI * 0.5);
+        targetCtx.stroke();
+
+        const goldGrad = targetCtx.createLinearGradient(-11, -16, 11, 4);
+        goldGrad.addColorStop(0, '#fef08a');
+        goldGrad.addColorStop(0.5, '#facc15');
+        goldGrad.addColorStop(1, '#ca8a04');
+        targetCtx.fillStyle = goldGrad;
+        targetCtx.strokeStyle = '#713f12';
+        targetCtx.lineWidth = 2;
+        targetCtx.beginPath();
+        targetCtx.moveTo(-11, -16);
+        targetCtx.lineTo(11, -16);
+        targetCtx.lineTo(7, 2);
+        targetCtx.lineTo(-7, 2);
+        targetCtx.closePath();
+        targetCtx.fill();
+        targetCtx.stroke();
+
+        targetCtx.fillRect(-3, 2, 6, 8);
+        targetCtx.fillStyle = '#1e293b';
+        targetCtx.fillRect(-10, 10, 20, 6);
+        break;
+      }
+
+      case 'watering': {
+        targetCtx.strokeStyle = '#059669';
+        targetCtx.lineWidth = 3.5;
+        targetCtx.beginPath();
+        targetCtx.arc(-10, -2, 8, Math.PI * 0.5, Math.PI * 1.6);
+        targetCtx.stroke();
+
+        targetCtx.beginPath();
+        targetCtx.moveTo(9, 4);
+        targetCtx.lineTo(20, -8);
+        targetCtx.stroke();
+
+        targetCtx.fillStyle = '#34d399';
+        targetCtx.strokeStyle = '#064e3b';
+        targetCtx.lineWidth = 2;
+        targetCtx.beginPath();
+        targetCtx.roundRect(-11, -9, 22, 22, 5);
+        targetCtx.fill();
+        targetCtx.stroke();
+
+        targetCtx.fillStyle = '#facc15';
+        targetCtx.beginPath();
+        targetCtx.arc(21, -9, 4, 0, Math.PI * 2);
+        targetCtx.fill();
+        break;
+      }
+    }
+
+    targetCtx.restore();
+  }
+
+  function drawHouseholdItem(p) {
+    ctx.save();
+    ctx.translate(p.x, p.y);
+
+    const aura = ctx.createRadialGradient(0, 0, 5 * p.scale, 0, 0, p.radius + 11);
+    if (p.isTargetedShot) {
+      aura.addColorStop(0, 'rgba(244, 63, 94, 0.45)');
+      aura.addColorStop(1, 'rgba(244, 63, 94, 0)');
+    } else if (p.isUnderThrow) {
+      aura.addColorStop(0, 'rgba(168, 85, 247, 0.42)');
+      aura.addColorStop(1, 'rgba(168, 85, 247, 0)');
+    } else if (p.isStraight) {
+      aura.addColorStop(0, 'rgba(251, 146, 60, 0.30)');
+      aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    } else {
+      aura.addColorStop(0, 'rgba(56, 189, 248, 0.25)');
+      aura.addColorStop(1, 'rgba(0, 0, 0, 0)');
+    }
+    ctx.fillStyle = aura;
+    ctx.beginPath();
+    ctx.arc(0, 0, p.radius + 11, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.rotate(p.rotation);
+    drawItemGraphic(ctx, p.type, p.scale);
+
+    ctx.restore();
+  }
+
+  // ==========================================
+  // ALL 4 CHARACTER SPRITE RENDERERS
+  // ==========================================
+  function drawCharacterSprite(targetCtx, cx, topY, type, facing, walkPhase, isGrounded, squashX = 1, squashY = 1) {
+    targetCtx.save();
+    targetCtx.translate(cx, topY + 64);
+    targetCtx.scale(squashX, squashY);
+    targetCtx.translate(0, -64);
+
+    if (type === 'scout') {
+      const stride = isGrounded ? Math.sin(walkPhase) * 7 : 4;
+
+      targetCtx.fillStyle = '#334155';
+      targetCtx.strokeStyle = '#0f172a';
+      targetCtx.lineWidth = 2;
+      targetCtx.beginPath();
+      targetCtx.roundRect(-13, 45 - stride * 0.45, 10, 19, 4);
+      targetCtx.roundRect(3, 45 + stride * 0.45, 10, 19, 4);
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      targetCtx.fillStyle = '#10b981';
+      targetCtx.fillRect(-14, 59 - stride * 0.45, 12, 5);
+      targetCtx.fillRect(2, 59 + stride * 0.45, 12, 5);
+
+      targetCtx.fillStyle = '#475569';
+      targetCtx.beginPath();
+      targetCtx.roundRect(-facing * 14 - 5, 22, 10, 18, 3);
+      targetCtx.fill();
+
+      targetCtx.fillStyle = '#1e293b';
+      targetCtx.strokeStyle = '#34d399';
+      targetCtx.lineWidth = 2;
+      targetCtx.beginPath();
+      targetCtx.roundRect(-16, 20, 32, 27, 7);
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      targetCtx.fillStyle = '#34d399';
+      targetCtx.beginPath();
+      targetCtx.roundRect(-9, 26, 18, 12, 4);
+      targetCtx.fill();
+
+      targetCtx.fillStyle = '#64748b';
+      targetCtx.beginPath();
+      targetCtx.roundRect(-22, 23 + stride * 0.4, 7, 18, 3.5);
+      targetCtx.roundRect(15, 23 - stride * 0.4, 7, 18, 3.5);
+      targetCtx.fill();
+
+      targetCtx.fillStyle = '#334155';
+      targetCtx.strokeStyle = '#34d399';
+      targetCtx.lineWidth = 2;
+      targetCtx.beginPath();
+      targetCtx.roundRect(-15, 2, 30, 19, 8);
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      targetCtx.strokeStyle = '#94a3b8';
+      targetCtx.lineWidth = 2.5;
+      targetCtx.beginPath();
+      targetCtx.moveTo(0, 2);
+      targetCtx.lineTo(0, -7);
+      targetCtx.stroke();
+      targetCtx.fillStyle = '#34d399';
+      targetCtx.beginPath();
+      targetCtx.arc(0, -8, 3.5, 0, Math.PI * 2);
+      targetCtx.fill();
+
+      targetCtx.fillStyle = '#090d16';
+      targetCtx.beginPath();
+      targetCtx.roundRect(-11, 7, 22, 9, 4);
+      targetCtx.fill();
+      targetCtx.fillStyle = '#6ee7b7';
+      targetCtx.beginPath();
+      targetCtx.arc(facing * 2 - 4, 11.5, 2.5, 0, Math.PI * 2);
+      targetCtx.arc(facing * 2 + 4, 11.5, 2.5, 0, Math.PI * 2);
+      targetCtx.fill();
+
+    } else if (type === 'golem') {
+      const stride = isGrounded ? Math.sin(walkPhase) * 6 : 3;
+
+      targetCtx.fillStyle = '#44403c';
+      targetCtx.strokeStyle = '#1c1917';
+      targetCtx.lineWidth = 2;
+      targetCtx.beginPath();
+      targetCtx.roundRect(-16, 46 - stride * 0.4, 13, 18, 4);
+      targetCtx.roundRect(3, 46 + stride * 0.4, 13, 18, 4);
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      targetCtx.fillStyle = '#f97316';
+      targetCtx.fillRect(-12, 51 - stride * 0.4, 5, 6);
+      targetCtx.fillRect(7, 51 + stride * 0.4, 5, 6);
+
+      targetCtx.fillStyle = '#57534e';
+      targetCtx.strokeStyle = '#292524';
+      targetCtx.lineWidth = 2.2;
+      targetCtx.beginPath();
+      targetCtx.moveTo(-22, 18);
+      targetCtx.lineTo(22, 18);
+      targetCtx.lineTo(18, 49);
+      targetCtx.lineTo(-18, 49);
+      targetCtx.closePath();
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      targetCtx.fillStyle = '#fb923c';
+      targetCtx.shadowColor = '#f97316';
+      targetCtx.shadowBlur = 10;
+      targetCtx.beginPath();
+      targetCtx.moveTo(0, 24);
+      targetCtx.lineTo(9, 33);
+      targetCtx.lineTo(0, 42);
+      targetCtx.lineTo(-9, 33);
+      targetCtx.closePath();
+      targetCtx.fill();
+      targetCtx.shadowBlur = 0;
+
+      targetCtx.fillStyle = '#ea580c';
+      targetCtx.beginPath();
+      targetCtx.moveTo(-21, 20);
+      targetCtx.lineTo(-30, 8);
+      targetCtx.lineTo(-14, 14);
+      targetCtx.closePath();
+      targetCtx.fill();
+
+      targetCtx.beginPath();
+      targetCtx.moveTo(21, 20);
+      targetCtx.lineTo(30, 8);
+      targetCtx.lineTo(14, 14);
+      targetCtx.closePath();
+      targetCtx.fill();
+
+      targetCtx.fillStyle = '#78716c';
+      targetCtx.beginPath();
+      targetCtx.roundRect(-27, 22 + stride * 0.4, 9, 22, 4);
+      targetCtx.roundRect(18, 22 - stride * 0.4, 9, 22, 4);
+      targetCtx.fill();
+
+      targetCtx.fillStyle = '#44403c';
+      targetCtx.strokeStyle = '#1c1917';
+      targetCtx.lineWidth = 2;
+      targetCtx.beginPath();
+      targetCtx.roundRect(-14, 2, 28, 18, 5);
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      targetCtx.fillStyle = '#facc15';
+      targetCtx.beginPath();
+      targetCtx.moveTo(-5, 2);
+      targetCtx.lineTo(0, -8);
+      targetCtx.lineTo(5, 2);
+      targetCtx.closePath();
+      targetCtx.fill();
+
+      targetCtx.fillStyle = '#fef08a';
+      targetCtx.fillRect(facing * 2 - 8, 9, 6, 4);
+      targetCtx.fillRect(facing * 2 + 2, 9, 6, 4);
+
+    } else if (type === 'warden') {
+      const stride = isGrounded ? Math.sin(walkPhase) * 6 : 3;
+
+      targetCtx.fillStyle = '#312e81';
+      targetCtx.strokeStyle = '#1e1b4b';
+      targetCtx.lineWidth = 2;
+      targetCtx.beginPath();
+      targetCtx.roundRect(-15, 45 - stride * 0.4, 12, 19, 4);
+      targetCtx.roundRect(3, 45 + stride * 0.4, 12, 19, 4);
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      targetCtx.fillStyle = '#facc15';
+      targetCtx.fillRect(-15, 59 - stride * 0.4, 12, 4);
+      targetCtx.fillRect(3, 59 + stride * 0.4, 12, 4);
+
+      targetCtx.fillStyle = '#4c1d95';
+      targetCtx.strokeStyle = '#a78bfa';
+      targetCtx.lineWidth = 2.2;
+      targetCtx.beginPath();
+      targetCtx.moveTo(-21, 18);
+      targetCtx.lineTo(21, 18);
+      targetCtx.lineTo(17, 48);
+      targetCtx.lineTo(-17, 48);
+      targetCtx.closePath();
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      targetCtx.fillStyle = '#facc15';
+      targetCtx.beginPath();
+      targetCtx.moveTo(0, 23);
+      targetCtx.lineTo(9, 28);
+      targetCtx.lineTo(6, 40);
+      targetCtx.lineTo(0, 44);
+      targetCtx.lineTo(-6, 40);
+      targetCtx.lineTo(-9, 28);
+      targetCtx.closePath();
+      targetCtx.fill();
+
+      targetCtx.fillStyle = '#6d28d9';
+      targetCtx.strokeStyle = '#ddd6fe';
+      targetCtx.lineWidth = 1.8;
+      targetCtx.beginPath();
+      targetCtx.roundRect(-27, 17, 11, 13, 4);
+      targetCtx.roundRect(16, 17, 11, 13, 4);
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      targetCtx.fillStyle = '#312e81';
+      targetCtx.strokeStyle = '#a78bfa';
+      targetCtx.lineWidth = 2;
+      targetCtx.beginPath();
+      targetCtx.roundRect(-14, 2, 28, 18, 5);
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      targetCtx.fillStyle = '#facc15';
+      targetCtx.beginPath();
+      targetCtx.moveTo(-8, 2);
+      targetCtx.lineTo(0, -8);
+      targetCtx.lineTo(8, 2);
+      targetCtx.closePath();
+      targetCtx.fill();
+
+      targetCtx.fillStyle = '#ddd6fe';
+      targetCtx.shadowColor = '#a78bfa';
+      targetCtx.shadowBlur = 8;
+      targetCtx.fillRect(facing * 2 - 9, 9, 18, 4.5);
+      targetCtx.shadowBlur = 0;
+
+      const shieldX = facing * 18;
+      targetCtx.fillStyle = 'rgba(139, 92, 246, 0.85)';
+      targetCtx.strokeStyle = '#facc15';
+      targetCtx.lineWidth = 2.2;
+      targetCtx.beginPath();
+      targetCtx.moveTo(shieldX - 7, 23);
+      targetCtx.lineTo(shieldX + 7, 23);
+      targetCtx.lineTo(shieldX + 6, 41);
+      targetCtx.lineTo(shieldX, 47);
+      targetCtx.lineTo(shieldX - 6, 41);
+      targetCtx.closePath();
+      targetCtx.fill();
+      targetCtx.stroke();
+
+    } else {
+      // Shadow Lynx
+      const stride = isGrounded ? Math.sin(walkPhase) * 8 : 5;
+
+      targetCtx.fillStyle = '#1e293b';
+      targetCtx.strokeStyle = '#38bdf8';
+      targetCtx.lineWidth = 1.6;
+      targetCtx.beginPath();
+      targetCtx.roundRect(-facing * 15 - 5, 24, 10, 20, 3);
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      if (!isGrounded) {
+        targetCtx.fillStyle = '#38bdf8';
+        targetCtx.beginPath();
+        targetCtx.moveTo(-facing * 15 - 4, 44);
+        targetCtx.lineTo(-facing * 15 + 4, 44);
+        targetCtx.lineTo(-facing * 15, 56 + Math.random() * 6);
+        targetCtx.closePath();
+        targetCtx.fill();
+      }
+
+      targetCtx.fillStyle = '#0f172a';
+      targetCtx.strokeStyle = '#0284c7';
+      targetCtx.lineWidth = 2;
+      targetCtx.beginPath();
+      targetCtx.moveTo(-facing * 10, 42);
+      targetCtx.lineTo(-facing * 28, 30 + Math.cos(walkPhase) * 4);
+      targetCtx.lineTo(-facing * 22, 41);
+      targetCtx.lineTo(-facing * 31, 46 + Math.sin(walkPhase) * 4);
+      targetCtx.lineTo(-facing * 12, 48);
+      targetCtx.closePath();
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      targetCtx.fillStyle = '#1e293b';
+      targetCtx.strokeStyle = '#0f172a';
+      targetCtx.lineWidth = 2;
+      targetCtx.beginPath();
+      targetCtx.roundRect(-13, 45 - stride * 0.5, 10, 19, 3);
+      targetCtx.roundRect(3, 45 + stride * 0.5, 10, 19, 3);
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      targetCtx.fillStyle = '#0284c7';
+      targetCtx.fillRect(-14, 59 - stride * 0.5, 12, 5);
+      targetCtx.fillRect(2, 59 + stride * 0.5, 12, 5);
+
+      targetCtx.fillStyle = '#0f172a';
+      targetCtx.strokeStyle = '#38bdf8';
+      targetCtx.lineWidth = 2;
+      targetCtx.beginPath();
+      targetCtx.moveTo(-19, 22);
+      targetCtx.lineTo(19, 22);
+      targetCtx.lineTo(14, 47);
+      targetCtx.lineTo(-14, 47);
+      targetCtx.closePath();
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      targetCtx.fillStyle = '#0284c7';
+      targetCtx.beginPath();
+      targetCtx.moveTo(-13, 24);
+      targetCtx.lineTo(13, 24);
+      targetCtx.lineTo(0, 38);
+      targetCtx.closePath();
+      targetCtx.fill();
+
+      targetCtx.fillStyle = '#334155';
+      targetCtx.strokeStyle = '#38bdf8';
+      targetCtx.lineWidth = 1.6;
+      targetCtx.beginPath();
+      targetCtx.moveTo(-24, 22);
+      targetCtx.lineTo(-14, 20);
+      targetCtx.lineTo(-15, 31);
+      targetCtx.lineTo(-24, 28);
+      targetCtx.closePath();
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      targetCtx.beginPath();
+      targetCtx.moveTo(24, 22);
+      targetCtx.lineTo(14, 20);
+      targetCtx.lineTo(15, 31);
+      targetCtx.lineTo(24, 28);
+      targetCtx.closePath();
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      targetCtx.fillStyle = '#475569';
+      targetCtx.beginPath();
+      targetCtx.roundRect(-22, 30 + stride * 0.4, 7, 15, 3);
+      targetCtx.roundRect(15, 30 - stride * 0.4, 7, 15, 3);
+      targetCtx.fill();
+
+      targetCtx.fillStyle = '#1e293b';
+      targetCtx.strokeStyle = '#38bdf8';
+      targetCtx.lineWidth = 2;
+      targetCtx.beginPath();
+      targetCtx.moveTo(-14, 5);
+      targetCtx.lineTo(14, 5);
+      targetCtx.lineTo(17, 13);
+      targetCtx.lineTo(11, 21);
+      targetCtx.lineTo(-11, 21);
+      targetCtx.lineTo(-17, 13);
+      targetCtx.closePath();
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      targetCtx.fillStyle = '#0f172a';
+      targetCtx.beginPath();
+      targetCtx.moveTo(-13, 6);
+      targetCtx.lineTo(-17, -11);
+      targetCtx.lineTo(-4, 4);
+      targetCtx.closePath();
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      targetCtx.beginPath();
+      targetCtx.moveTo(13, 6);
+      targetCtx.lineTo(17, -11);
+      targetCtx.lineTo(4, 4);
+      targetCtx.closePath();
+      targetCtx.fill();
+      targetCtx.stroke();
+
+      targetCtx.fillStyle = '#38bdf8';
+      targetCtx.beginPath();
+      targetCtx.moveTo(-11, 4);
+      targetCtx.lineTo(-14, -6);
+      targetCtx.lineTo(-6, 4);
+      targetCtx.closePath();
+      targetCtx.fill();
+
+      targetCtx.beginPath();
+      targetCtx.moveTo(11, 4);
+      targetCtx.lineTo(14, -6);
+      targetCtx.lineTo(6, 4);
+      targetCtx.closePath();
+      targetCtx.fill();
+
+      targetCtx.fillStyle = '#64748b';
+      targetCtx.beginPath();
+      targetCtx.moveTo(facing * 3 - 7, 15);
+      targetCtx.lineTo(facing * 3 + 7, 15);
+      targetCtx.lineTo(facing * 3 + 5, 21);
+      targetCtx.lineTo(facing * 3 - 5, 21);
+      targetCtx.closePath();
+      targetCtx.fill();
+
+      targetCtx.fillStyle = '#38bdf8';
+      targetCtx.shadowColor = '#38bdf8';
+      targetCtx.shadowBlur = 8;
+      targetCtx.beginPath();
+      targetCtx.moveTo(facing * 3 - 9, 10);
+      targetCtx.lineTo(facing * 3 - 2, 12.5);
+      targetCtx.lineTo(facing * 3 - 8, 13.5);
+      targetCtx.closePath();
+      targetCtx.fill();
+
+      targetCtx.beginPath();
+      targetCtx.moveTo(facing * 3 + 9, 10);
+      targetCtx.lineTo(facing * 3 + 2, 12.5);
+      targetCtx.lineTo(facing * 3 + 8, 13.5);
+      targetCtx.closePath();
+      targetCtx.fill();
+      targetCtx.shadowBlur = 0;
+    }
+
+    targetCtx.restore();
+  }
+
+  // Render Character Previews on Step 2 Screen
+  function renderCardPreviews() {
+    const scoutCtx = document.getElementById('preview-scout').getContext('2d');
+    scoutCtx.clearRect(0, 0, 92, 100);
+    drawCharacterSprite(scoutCtx, 46, 20, 'scout', 1, 0, true);
+
+    const golemCtx = document.getElementById('preview-golem').getContext('2d');
+    golemCtx.clearRect(0, 0, 92, 100);
+    drawCharacterSprite(golemCtx, 46, 20, 'golem', 1, 0, true);
+
+    const ninjaCtx = document.getElementById('preview-ninja').getContext('2d');
+    ninjaCtx.clearRect(0, 0, 92, 100);
+    drawCharacterSprite(ninjaCtx, 46, 20, 'ninja', 1, 0.8, false);
+
+    const wardenCtx = document.getElementById('preview-warden').getContext('2d');
+    wardenCtx.clearRect(0, 0, 92, 100);
+    drawCharacterSprite(wardenCtx, 46, 20, 'warden', 1, 0, true);
+  }
+  renderCardPreviews();
+
+  function refreshCharacterShopUI() {
+    menuCoinBalance.textContent = userProfile.roboCoins.toLocaleString();
+    charCoinBalance.textContent = userProfile.roboCoins.toLocaleString();
+    hudWalletCoins.textContent = userProfile.roboCoins.toLocaleString();
+
+    if (!isCharUnlocked(selectedChar)) {
+      selectedChar = 'scout';
+    }
+
+    charCards.forEach(card => {
+      const cKey = card.dataset.char;
+      const cfg = CHARACTER_CONFIGS[cKey];
+      const unlocked = isCharUnlocked(cKey);
+      const btn = card.querySelector('.unlock-btn');
+
+      card.classList.toggle('locked', !unlocked);
+      card.classList.toggle('selected', unlocked && selectedChar === cKey);
+
+      if (unlocked) {
+        btn.classList.add('unlocked-tag');
+        btn.textContent = cKey === 'scout'
+          ? (selectedChar === cKey ? '✓ EQUIPPED (STARTER)' : 'SELECT STARTER')
+          : (selectedChar === cKey ? '✓ EQUIPPED' : 'SELECT FIGHTER');
+      } else {
+        btn.classList.remove('unlocked-tag');
+        btn.innerHTML = `🔒 UNLOCK (${cfg.cost} COINS)`;
+      }
+    });
+  }
+
+  function trySelectOrUnlockCharacter(charKey) {
+    const cfg = CHARACTER_CONFIGS[charKey];
+    if (!cfg) return;
+    charShopMsg.textContent = '';
+
+    if (isCharUnlocked(charKey)) {
+      selectedChar = charKey;
+      userProfile.char = charKey;
+      savePlayerProfile(userProfile);
+      refreshCharacterShopUI();
+      return;
+    }
+
+    if (userProfile.roboCoins >= cfg.cost) {
+      userProfile.roboCoins -= cfg.cost;
+      userProfile.unlockedChars.push(charKey);
+      selectedChar = charKey;
+      userProfile.char = charKey;
+      savePlayerProfile(userProfile);
+      charShopMsg.style.color = '#6ee7b7';
+      charShopMsg.textContent = `🎉 Unlocked ${cfg.label} for ${cfg.cost} Robo Coins!`;
+      refreshCharacterShopUI();
+    } else {
+      const needed = cfg.cost - userProfile.roboCoins;
+      charShopMsg.style.color = '#fca5a5';
+      charShopMsg.textContent = `Need ${needed} more Robo Coin${needed === 1 ? '' : 's'} to unlock ${cfg.label} (${cfg.cost} total)!`;
+    }
+  }
+
+  charCards.forEach(card => {
+    card.addEventListener('click', () => {
+      trySelectOrUnlockCharacter(card.dataset.char);
+    });
+  });
+
+  function refreshNameScreenUI() {
+    refreshCharacterShopUI();
+
+    if (userProfile.name) {
+      playerName = userProfile.name;
+      nameInput.value = userProfile.name;
+
+      rememberedNote.textContent = `👋 Welcome back, ${userProfile.name}!`;
+      rememberedNote.classList.remove('hidden');
+
+      const cooldownMs = getRemainingNameCooldownMs();
+      if (cooldownMs > 0) {
+        nameInput.disabled = true;
+        nameCooldownNote.textContent = `🔒 Name locked for ${formatDurationRemaining(cooldownMs)} (you can change it once a week)`;
+        nameCooldownNote.classList.remove('hidden');
+        nextToCharsBtn.textContent = `CONTINUE AS ${userProfile.name.toUpperCase()} ➔`;
+      } else {
+        nameInput.disabled = false;
+        nameCooldownNote.textContent = `✏️ Weekly name change available! Changing your name updates your leaderboard entry too.`;
+        nameCooldownNote.classList.remove('hidden');
+        nextToCharsBtn.textContent = `NEXT: PICK CHARACTER ➔`;
+      }
+    } else {
+      nameInput.disabled = false;
+      rememberedNote.classList.add('hidden');
+      nameCooldownNote.classList.add('hidden');
+      nextToCharsBtn.textContent = 'NEXT: PICK CHARACTER ➔';
+    }
+  }
+
+  refreshNameScreenUI();
+
+  // ==========================================
+  // TWO-STEP MENU FLOW: NAME -> CHARACTERS & UNLOCKS
+  // ==========================================
+  function goToCharacterScreen() {
+    const cooldownMs = getRemainingNameCooldownMs();
+    charShopMsg.textContent = '';
+
+    if (userProfile.name && cooldownMs > 0) {
+      nameError.textContent = '';
+      playerName = userProfile.name;
+      welcomeGreeting.innerHTML = `Welcome back, <strong style="color:#34d399;">${escapeHtml(playerName)}</strong>! Pick or unlock a fighter.`;
+      refreshCharacterShopUI();
+      nameScreen.classList.add('hidden');
+      charScreen.classList.remove('hidden');
+      return;
+    }
+
+    const trimmed = nameInput.value.trim();
+    if (!trimmed) {
+      nameError.textContent = 'Please enter your name first!';
+      nameInput.focus();
+      return;
+    }
+    nameError.textContent = '';
+
+    const isFirstTimeSettingName = !userProfile.name;
+    const isActuallyChangingName = userProfile.name && userProfile.name !== trimmed;
+
+    playerName = trimmed;
+    userProfile.name = trimmed;
+    userProfile.char = selectedChar;
+
+    if (isFirstTimeSettingName || isActuallyChangingName) {
+      userProfile.lastNameChangeAt = Date.now();
+    }
+
+    savePlayerProfile(userProfile);
+
+    if (isActuallyChangingName) {
+      propagateNameChangeToLeaderboard(trimmed, userProfile.roboCoins);
+    }
+
+    refreshNameScreenUI();
+    welcomeGreeting.innerHTML = `Welcome, <strong style="color:#34d399;">${escapeHtml(playerName)}</strong>! Pick or unlock a fighter.`;
+
+    nameScreen.classList.add('hidden');
+    charScreen.classList.remove('hidden');
+  }
+
+  nextToCharsBtn.addEventListener('click', goToCharacterScreen);
+  nameInput.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter') goToCharacterScreen();
+  });
+
+  backToNameBtn.addEventListener('click', () => {
+    refreshNameScreenUI();
+    charScreen.classList.add('hidden');
+    nameScreen.classList.remove('hidden');
+    if (!nameInput.disabled) nameInput.focus();
+  });
+
+  startBtn.addEventListener('click', initGame);
+  restartBtn.addEventListener('click', initGame);
+  changeCharBtn.addEventListener('click', () => {
+    charShopMsg.textContent = '';
+    refreshCharacterShopUI();
+    gameoverScreen.classList.add('hidden');
+    charScreen.classList.remove('hidden');
+  });
+
+  // Aegis Warden Active Shield Trigger (S or Down Arrow)
+  function triggerWardenShieldAbility() {
+    if (!gameRunning) return;
+    if (selectedChar !== 'warden') return;
+    if (player.shieldCooldownTimer <= 0) {
+      player.shieldTimer = Math.max(player.shieldTimer, WARDEN_ABILITY_SHIELD_DURATION);
+      player.shieldCooldownTimer = WARDEN_ABILITY_COOLDOWN;
+      spawnParticles(player.x, player.y + player.h / 2, '#a78bfa', 22);
+    }
+  }
+
+  // Keyboard Controls
+  window.addEventListener('keydown', (e) => {
+    if (!gameRunning) return;
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = true;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = true;
+    if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
+      e.preventDefault();
+      if (!e.repeat) {
+        player.jumpHeld = true;
+        player.jumpBufferTimer = 0.14;
+      }
+    }
+    if (e.code === 'ArrowDown' || e.code === 'KeyS') {
+      e.preventDefault();
+      if (!e.repeat) {
+        triggerWardenShieldAbility();
+      }
+    }
+  });
+
+  window.addEventListener('keyup', (e) => {
+    if (e.code === 'ArrowLeft' || e.code === 'KeyA') keys.left = false;
+    if (e.code === 'ArrowRight' || e.code === 'KeyD') keys.right = false;
+    if (e.code === 'ArrowUp' || e.code === 'KeyW' || e.code === 'Space') {
+      player.jumpHeld = false;
+      if (player.vy < -340) {
+        player.vy *= 0.64;
+      }
+    }
+  });
+
+  // Touch Controls
+  const btnLeft = document.getElementById('btn-left');
+  const btnRight = document.getElementById('btn-right');
+  const btnJump = document.getElementById('btn-jump');
+
+  btnLeft.addEventListener('touchstart', (e) => { e.preventDefault(); keys.left = true; });
+  btnLeft.addEventListener('touchend', () => { keys.left = false; });
+  btnRight.addEventListener('touchstart', (e) => { e.preventDefault(); keys.right = true; });
+  btnRight.addEventListener('touchend', () => { keys.right = false; });
+  btnJump.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    player.jumpHeld = true;
+    player.jumpBufferTimer = 0.14;
+  });
+  btnJump.addEventListener('touchend', () => {
+    player.jumpHeld = false;
+    if (player.vy < -340) {
+      player.vy *= 0.64;
+    }
+  });
+  btnShieldTouch.addEventListener('touchstart', (e) => {
+    e.preventDefault();
+    triggerWardenShieldAbility();
+  });
+
+  function executeJump() {
+    player.vy = player.jumpForce;
+    player.grounded = false;
+    player.coyoteTimer = 0;
+    player.jumpBufferTimer = 0;
+    player.jumpsRemaining--;
+    player.squashX = 0.82;
+    player.squashY = 1.20;
+    const dustColor = selectedChar === 'golem' ? '#fb923c' : (selectedChar === 'warden' ? '#a78bfa' : '#38bdf8');
+    spawnParticles(player.x, player.y + player.h, dustColor, 10);
+  }
+
+  function initGame() {
+    if (!isCharUnlocked(selectedChar)) {
+      selectedChar = 'scout';
+    }
+    const cfg = CHARACTER_CONFIGS[selectedChar];
+    userProfile.char = selectedChar;
+    savePlayerProfile(userProfile);
+
+    player.maxHearts = cfg.hearts;
+    player.maxJumps = cfg.jumps;
+    player.maxSpeed = cfg.speed;
+
+    player.hearts = player.maxHearts;
+    player.x = canvas.width / 2;
+    player.y = FLOOR_Y - player.h;
+    player.vx = 0;
+    player.vy = 0;
+    player.grounded = true;
+    player.coyoteTimer = 0;
+    player.jumpBufferTimer = 0;
+    player.jumpHeld = false;
+    player.jumpsRemaining = player.maxJumps;
+    player.shieldTimer = 0;
+    player.shieldCooldownTimer = 0;
+    player.walkCycle = 0;
+    player.facing = 1;
+    player.squashX = 1;
+    player.squashY = 1;
+
+    if (cfg.hasActiveShield) {
+      abilityIndicator.classList.remove('hidden');
+      btnShieldTouch.classList.remove('hidden');
+    } else {
+      abilityIndicator.classList.add('hidden');
+      btnShieldTouch.classList.add('hidden');
+    }
+
+    elapsedTime = 0;
+    difficultyTimer = 0;
+    difficultyTier = 1;
+    score = 0;
+    shakeTimer = 0;
+    projectiles = [];
+    particles = [];
+
+    precisionCycleTimer = 0;
+    precisionLockRemaining = 0;
+    aimLockBanner.classList.add('hidden');
+
+    beltOffset = 0;
+    conveyorItems = [];
+    conveyorSpawnTimer = 0.2;
+
+    robots.forEach(r => {
+      r.animPhase = 'idle';
+      r.animT = 0;
+      r.exactTargetQueued = false;
+      r.heldItem = null;
+      r.crateLidOpen = 0;
+      r.recoil = 0;
+    });
+
+    nextThrowTimer = 0.45;
+    activeRobotIndex = 0;
+
+    hudPlayerName.textContent = `${playerName} • ${cfg.label}`;
+    hudWalletCoins.textContent = userProfile.roboCoins.toLocaleString();
+    updateHUD();
+
+    nameScreen.classList.add('hidden');
+    charScreen.classList.add('hidden');
+    gameoverScreen.classList.add('hidden');
+    hud.classList.remove('hidden');
+
+    gameRunning = true;
+    lastTimestamp = performance.now();
+    requestAnimationFrame(gameLoop);
+  }
+
+  function updateHUD() {
+    if (player.shieldTimer > 0) {
+      shieldIndicator.textContent = `🛡️ CIRCLE SHIELD ACTIVE (${player.shieldTimer.toFixed(1)}s)`;
+    } else {
+      shieldIndicator.textContent = '';
+    }
+
+    if (selectedChar === 'warden') {
+      if (player.shieldCooldownTimer > 0) {
+        abilityIndicator.style.color = '#94a3b8';
+        abilityIndicator.textContent = `⏳ [S / ▼] Shield Cooldown: ${player.shieldCooldownTimer.toFixed(1)}s`;
+      } else {
+        abilityIndicator.style.color = '#a78bfa';
+        abilityIndicator.textContent = `🛡️ [S / ▼] 4s Shield READY!`;
+      }
+    }
+
+    hudScore.textContent = Math.floor(score).toLocaleString();
+    hudTime.textContent = elapsedTime.toFixed(1);
+  }
+
+  function startRobotCrateGrab(robot, isExactTarget = false) {
+    const item = HOUSE_ITEMS[Math.floor(Math.random() * HOUSE_ITEMS.length)];
+    robot.heldItem = item;
+    robot.animPhase = 'reaching';
+    robot.animT = 0;
+    robot.exactTargetQueued = isExactTarget;
+  }
+
+  function releaseHeldItemFromRobot(robot) {
+    const baseItem = robot.heldItem || HOUSE_ITEMS[Math.floor(Math.random() * HOUSE_ITEMS.length)];
+    const exactTargetMode = robot.exactTargetQueued || precisionLockRemaining > 0;
+    robot.heldItem = null;
+
+    const dir = robot.side === 'left' ? 1 : -1;
+    const startX = robot.x + dir * 48;
+    const startY = robot.y - 60;
+    const speedMultiplier = Math.min(2.15, 1 + (difficultyTier - 1) * 0.09 + elapsedTime * 0.004);
+
+    // Every throw sprays 1 item at start, scaling endlessly into multi-item scatter volleys across the whole arena!
+    const extraScatterCount = Math.min(4, Math.floor(elapsedTime / 14) + (Math.random() < Math.min(0.75, elapsedTime * 0.015) ? 1 : 0));
+    const volleyCount = 1 + extraScatterCount;
+
+    for (let k = 0; k < volleyCount; k++) {
+      const item = k === 0 ? baseItem : HOUSE_ITEMS[Math.floor(Math.random() * HOUSE_ITEMS.length)];
+      let vx, vy, ax = 0, projGravity, isStraightThrow = false, isUnderThrow = false;
+
+      if (k === 0 && exactTargetMode) {
+        isStraightThrow = true;
+        const targetX = player.x;
+        const targetY = player.y + player.h * 0.5;
+        const dx = targetX - startX;
+        const focusedSpeed = 485 * speedMultiplier;
+        const flightTime = Math.max(0.85, Math.min(1.42, Math.abs(dx) / focusedSpeed));
+        projGravity = 248;
+        vx = dx / flightTime;
+        vy = (targetY - startY - 0.5 * projGravity * flightTime * flightTime) / flightTime;
+      } else {
+        const zoneRoll = Math.random();
+
+        if (zoneRoll < 0.24) {
+          isUnderThrow = true;
+          const lipX = robot.side === 'left' ? 295 : canvas.width - 295;
+          const underSpotX = robot.side === 'left'
+            ? (35 + Math.random() * 215)
+            : (canvas.width - 35 - Math.random() * 215);
+
+          const flightTime = 1.15 + Math.random() * 0.32;
+          const tLip = 0.26;
+          ax = (2 * (underSpotX - startX) - (2 * flightTime / tLip) * (lipX - startX)) /
+               (flightTime * flightTime - flightTime * tLip);
+          vx = (lipX - startX - 0.5 * ax * tLip * tLip) / tLip;
+          projGravity = 930;
+          vy = ((FLOOR_Y - 22 - startY) - 0.5 * projGravity * flightTime * flightTime) / flightTime;
+        } else if (zoneRoll < 0.58) {
+          const randomArenaX = 35 + Math.random() * (canvas.width - 70);
+          const flightTime = Math.max(0.88, (1.68 - Math.min(0.65, elapsedTime * 0.008)) + Math.random() * 0.42);
+          projGravity = (780 + Math.random() * 260) * Math.min(1.5, 1 + elapsedTime * 0.003);
+          vx = (randomArenaX - startX) / flightTime;
+          vy = ((FLOOR_Y - 22 - startY) - 0.5 * projGravity * flightTime * flightTime) / flightTime;
+          if (vy < -320) vy = -320;
+        } else {
+          isStraightThrow = true;
+          const baseSpeed = (340 + Math.random() * 260) * speedMultiplier;
+          vx = dir * baseSpeed;
+          const targetY = FLOOR_Y - 28 - Math.random() * 240;
+          const travelTime = Math.max(0.55, Math.abs((canvas.width * (0.35 + Math.random() * 0.55)) / baseSpeed));
+          projGravity = (110 + Math.random() * 140) * speedMultiplier;
+          vy = (targetY - startY - 0.5 * projGravity * travelTime * travelTime) / travelTime;
+        }
+      }
+
+      projectiles.push({
+        x: startX,
+        y: startY,
+        vx,
+        vy,
+        ax,
+        gravity: projGravity,
+        rotation: Math.random() * Math.PI * 2,
+        rotSpeed: (Math.random() - 0.5) * 10,
+        type: item.type,
+        scale: item.scale,
+        radius: item.radius,
+        isStraight: isStraightThrow,
+        isTargetedShot: k === 0 && exactTargetMode,
+        isUnderThrow
+      });
+    }
+
+    robot.recoil = -dir * 8;
+    const sparkColor = exactTargetMode ? '#f43f5e' : '#38bdf8';
+    spawnParticles(startX, startY, sparkColor, 8);
+  }
+
+  function spawnParticles(x, y, color, count) {
+    for (let i = 0; i < count; i++) {
+      particles.push({
+        x,
+        y,
+        vx: (Math.random() - 0.5) * 300,
+        vy: (Math.random() - 0.8) * 260,
+        life: 0.4 + Math.random() * 0.3,
+        maxLife: 0.7,
+        color,
+        size: 3 + Math.random() * 4.5
+      });
+    }
+  }
+
+  function spawnConveyorItem(side) {
+    const item = HOUSE_ITEMS[Math.floor(Math.random() * HOUSE_ITEMS.length)];
+    conveyorItems.push({
+      side,
+      progress: 0,
+      type: item.type,
+      scale: item.scale * 0.72,
+      wobble: Math.random() * Math.PI * 2
+    });
+  }
+
+  function update(dt) {
+    elapsedTime += dt;
+    difficultyTimer += dt;
+    score += dt * 10 * difficultyTier;
+
+    if (difficultyTimer >= 4.0) {
+      difficultyTimer -= 4.0;
+      difficultyTier++;
+    }
+
+    const beltSpeed = 85 + difficultyTier * 11;
+    beltOffset = (beltOffset + beltSpeed * dt) % 24;
+
+    conveyorSpawnTimer -= dt;
+    if (conveyorSpawnTimer <= 0) {
+      spawnConveyorItem('left');
+      spawnConveyorItem('right');
+      conveyorSpawnTimer = Math.max(0.32, 1.25 - elapsedTime * 0.014);
+    }
+
+    for (let i = conveyorItems.length - 1; i >= 0; i--) {
+      const ci = conveyorItems[i];
+      ci.progress += dt * (0.95 + difficultyTier * 0.07);
+      if (ci.progress >= 1.32) {
+        const crateX = ci.side === 'left' ? 64 : canvas.width - 64;
+        spawnParticles(crateX, 422, '#facc15', 4);
+        conveyorItems.splice(i, 1);
+      }
+    }
+
+    if (precisionLockRemaining > 0) {
+      precisionLockRemaining = Math.max(0, precisionLockRemaining - dt);
+      if (precisionLockRemaining === 0) {
+        aimLockBanner.classList.add('hidden');
+      }
+    } else {
+      precisionCycleTimer += dt;
+      if (precisionCycleTimer >= 10.0) {
+        precisionCycleTimer -= 10.0;
+        precisionLockRemaining = 1.0;
+        aimLockBanner.classList.remove('hidden');
+        nextThrowTimer = 0.04;
+      }
+    }
+
+    if (shakeTimer > 0) shakeTimer -= dt;
+    if (player.shieldTimer > 0) {
+      player.shieldTimer = Math.max(0, player.shieldTimer - dt);
+    }
+    if (player.shieldCooldownTimer > 0) {
+      player.shieldCooldownTimer = Math.max(0, player.shieldCooldownTimer - dt);
+    }
+
+    player.squashX += (1 - player.squashX) * Math.min(1, dt * 16);
+    player.squashY += (1 - player.squashY) * Math.min(1, dt * 16);
+
+    const moveDir = (keys.right ? 1 : 0) - (keys.left ? 1 : 0);
+    if (moveDir !== 0) {
+      if (Math.sign(player.vx) !== moveDir && player.vx !== 0) {
+        player.vx = 0;
+      }
+      player.vx += moveDir * player.accel * dt;
+      if (Math.abs(player.vx) > player.maxSpeed) {
+        player.vx = moveDir * player.maxSpeed;
+      }
+      player.facing = moveDir;
+      player.walkCycle += dt * 22;
+    } else {
+      const drop = player.friction * dt;
+      if (Math.abs(player.vx) <= drop) {
+        player.vx = 0;
+      } else {
+        player.vx -= Math.sign(player.vx) * drop;
+      }
+      player.walkCycle = 0;
+    }
+
+    player.x += player.vx * dt;
+    const halfW = player.w / 2;
+    if (player.x < halfW + 18) player.x = halfW + 18;
+    if (player.x > canvas.width - halfW - 18) player.x = canvas.width - halfW - 18;
+
+    if (player.grounded) {
+      player.coyoteTimer = 0.11;
+    } else {
+      player.coyoteTimer = Math.max(0, player.coyoteTimer - dt);
+    }
+
+    if (player.jumpBufferTimer > 0) {
+      player.jumpBufferTimer = Math.max(0, player.jumpBufferTimer - dt);
+      const canGroundOrCoyoteJump = player.grounded || player.coyoteTimer > 0;
+      const canAirDoubleJump = !player.grounded && player.coyoteTimer <= 0 && player.jumpsRemaining > 0;
+
+      if (canGroundOrCoyoteJump || canAirDoubleJump) {
+        if (canGroundOrCoyoteJump && player.jumpsRemaining < player.maxJumps) {
+          player.jumpsRemaining = player.maxJumps;
+        }
+        executeJump();
+      }
+    }
+
+    const wasAirborne = !player.grounded;
+    let gravityScale = 1.0;
+    if (Math.abs(player.vy) < 160) {
+      gravityScale = 0.72;
+    } else if (player.vy > 0) {
+      gravityScale = player.fallMultiplier;
+    }
+
+    player.vy += GRAVITY * gravityScale * dt;
+    player.y += player.vy * dt;
+
+    if (player.y >= FLOOR_Y - player.h) {
+      player.y = FLOOR_Y - player.h;
+      player.vy = 0;
+      player.grounded = true;
+      player.jumpsRemaining = player.maxJumps;
+      if (wasAirborne) {
+        player.squashX = 1.18;
+        player.squashY = 0.84;
+      }
+    }
+
+    const animSpeedScale = Math.min(3.4, (precisionLockRemaining > 0 ? 1.45 : 1.0) + elapsedTime * 0.032);
+    robots.forEach(robot => {
+      robot.recoil *= 0.85;
+
+      if (robot.animPhase === 'reaching') {
+        robot.animT += dt * 7.2 * animSpeedScale;
+        robot.crateLidOpen = Math.min(1, robot.animT * 1.6);
+        if (robot.animT >= 1) {
+          robot.animT = 0;
+          robot.animPhase = 'lifting';
+          spawnParticles(robot.crateX, robot.y - 44, '#facc15', 5);
+        }
+      } else if (robot.animPhase === 'lifting') {
+        robot.animT += dt * 7.5 * animSpeedScale;
+        robot.crateLidOpen = Math.max(0, 1 - robot.animT * 0.7);
+        if (robot.animT >= 1) {
+          robot.animT = 0;
+          robot.animPhase = 'windup';
+        }
+      } else if (robot.animPhase === 'windup') {
+        robot.animT += dt * 8.5 * animSpeedScale;
+        robot.crateLidOpen = Math.max(0, robot.crateLidOpen - dt * 3);
+        if (robot.animT >= 1) {
+          robot.animT = 0;
+          robot.animPhase = 'throwing';
+          releaseHeldItemFromRobot(robot);
+        }
+      } else if (robot.animPhase === 'throwing') {
+        robot.animT += dt * 6.5 * animSpeedScale;
+        robot.crateLidOpen = Math.max(0, robot.crateLidOpen - dt * 3);
+        if (robot.animT >= 1) {
+          robot.animT = 0;
+          robot.animPhase = 'idle';
+        }
+      } else {
+        robot.crateLidOpen = Math.max(0, robot.crateLidOpen - dt * 3);
+      }
+    });
+
+    const isLockActive = precisionLockRemaining > 0;
+    const maxActiveItems = Math.min(48, 6 + Math.floor(elapsedTime * 0.65) + (isLockActive ? 8 : 0));
+
+    nextThrowTimer -= dt;
+    if (nextThrowTimer <= 0) {
+      if (projectiles.length < maxActiveItems) {
+        const currentRobot = robots[activeRobotIndex];
+        if (currentRobot.animPhase === 'idle') {
+          startRobotCrateGrab(currentRobot, isLockActive);
+        }
+
+        const dualThrowChance = Math.min(0.95, 0.20 + elapsedTime * 0.015);
+        if (isLockActive || Math.random() < dualThrowChance) {
+          const otherRobot = robots[1 - activeRobotIndex];
+          if (otherRobot.animPhase === 'idle') {
+            startRobotCrateGrab(otherRobot, false);
+          }
+        }
+
+        const minCooldown = Math.max(0.08, 0.85 - elapsedTime * 0.014);
+        activeRobotIndex = 1 - activeRobotIndex;
+        nextThrowTimer = isLockActive ? Math.min(0.22, minCooldown) : minCooldown * (0.75 + Math.random() * 0.5);
+      } else {
+        nextThrowTimer = 0.08;
+      }
+    }
+
+    for (let i = projectiles.length - 1; i >= 0; i--) {
+      const p = projectiles[i];
+      if (p.ax) {
+        p.vx += p.ax * dt;
+      }
+      p.vy += p.gravity * dt;
+      p.x += p.vx * dt;
+      p.y += p.vy * dt;
+      p.rotation += p.rotSpeed * dt;
+
+      if (p.y > FLOOR_Y - 6 || p.x < -60 || p.x > canvas.width + 60) {
+        if (p.y >= FLOOR_Y - 6) {
+          spawnParticles(p.x, FLOOR_Y - 4, '#94a3b8', 6);
+          score += 5;
+        }
+        projectiles.splice(i, 1);
+        continue;
+      }
+
+      if (player.shieldTimer > 0) {
+        const centerX = player.x;
+        const centerY = player.y + player.h / 2;
+        const shieldRadius = 56;
+        const dx = p.x - centerX;
+        const dy = p.y - centerY;
+        const hitDist = shieldRadius + p.radius - 4;
+
+        if (dx * dx + dy * dy < hitDist * hitDist) {
+          projectiles.splice(i, 1);
+          spawnParticles(p.x, p.y, selectedChar === 'warden' ? '#a78bfa' : '#38bdf8', 16);
+          score += 15;
+          continue;
+        }
+      } else {
+        const hitboxPadX = halfW - 5;
+        const closestX = Math.max(player.x - hitboxPadX, Math.min(p.x, player.x + hitboxPadX));
+        const closestY = Math.max(player.y + 4, Math.min(p.y, player.y + player.h - 2));
+        const dx = p.x - closestX;
+        const dy = p.y - closestY;
+
+        if (dx * dx + dy * dy < (p.radius - 3) * (p.radius - 3)) {
+          projectiles.splice(i, 1);
+          spawnParticles(p.x, p.y, '#ef4444', 18);
+          player.hearts--;
+          player.shieldTimer = HIT_SHIELD_DURATION;
+          shakeTimer = 0.28;
+
+          if (player.hearts <= 0) {
+            endGame();
+            return;
+          }
+        }
+      }
+    }
+
+    for (let i = particles.length - 1; i >= 0; i--) {
+      const pt = particles[i];
+      pt.x += pt.vx * dt;
+      pt.y += pt.vy * dt;
+      pt.vy += 520 * dt;
+      pt.life -= dt;
+      if (pt.life <= 0) particles.splice(i, 1);
+    }
+
+    updateHUD();
+  }
+
+  function drawBackground() {
+    ctx.imageSmoothingEnabled = false;
+    ctx.drawImage(pixelBgCanvas, 0, 0);
+  }
+
+  function drawPlatforms() {
+    platforms.forEach(plat => {
+      ctx.fillStyle = '#1e293b';
+      const steps = 6;
+      const stepW = (plat.w - 30) / steps;
+      const stepH = 78 / steps;
+      for (let s = 0; s < steps; s++) {
+        const w = (plat.w - 30) - s * stepW;
+        const x = plat.x === 0 ? 0 : canvas.width - w;
+        ctx.fillRect(x, plat.y + plat.h + s * stepH, w, stepH + 1);
+      }
+
+      ctx.fillStyle = '#334155';
+      ctx.fillRect(plat.x, plat.y, plat.w, plat.h);
+
+      ctx.fillStyle = '#64748b';
+      for (let rx = plat.x + 12; rx < plat.x + plat.w - 12; rx += 24) {
+        ctx.fillRect(rx, plat.y + 13, 6, 6);
+      }
+
+      ctx.fillStyle = '#f43f5e';
+      ctx.fillRect(plat.x, plat.y, plat.w, 6);
+    });
+  }
+
+  function drawConveyorSystem(side) {
+    const isLeft = side === 'left';
+    const dir = isLeft ? 1 : -1;
+    const beltStartX = isLeft ? -16 : canvas.width + 16;
+    const beltEndX = isLeft ? 74 : canvas.width - 74;
+    const beltY = 336;
+    const beltH = 22;
+
+    ctx.save();
+
+    ctx.fillStyle = '#1e293b';
+    ctx.strokeStyle = '#475569';
+    ctx.lineWidth = 2;
+    const bracketX = isLeft ? 0 : canvas.width - 28;
+    ctx.fillRect(bracketX, beltY - 14, 28, 52);
+    ctx.strokeRect(bracketX, beltY - 14, 28, 52);
+
+    const chuteX = isLeft ? 62 : canvas.width - 62;
+    ctx.fillStyle = 'rgba(56, 189, 248, 0.14)';
+    ctx.strokeStyle = '#38bdf8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(chuteX - dir * 18, beltY + beltH);
+    ctx.lineTo(chuteX + dir * 18, beltY + beltH);
+    ctx.lineTo(chuteX + dir * 24, 412);
+    ctx.lineTo(chuteX - dir * 24, 412);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    conveyorItems.forEach(ci => {
+      if (ci.side !== side) return;
+      let ix, iy, rot = 0;
+      if (ci.progress <= 1.0) {
+        ix = beltStartX + (beltEndX - beltStartX) * ci.progress;
+        iy = beltY - 14 + Math.sin(ci.progress * 18 + ci.wobble) * 1.5;
+      } else {
+        const dropT = (ci.progress - 1.0) / 0.32;
+        ix = beltEndX + dir * dropT * 6;
+        iy = (beltY - 14) + dropT * dropT * 88;
+        rot = dir * dropT * 1.1;
+      }
+      ctx.save();
+      ctx.translate(ix, iy);
+      ctx.rotate(rot);
+      drawItemGraphic(ctx, ci.type, ci.scale);
+      ctx.restore();
+    });
+
+    const minX = Math.min(beltStartX, beltEndX);
+    const width = Math.abs(beltEndX - beltStartX);
+    ctx.fillStyle = '#0f172a';
+    ctx.strokeStyle = '#64748b';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.roundRect(minX, beltY, width, beltH, 11);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#facc15';
+    const step = 24;
+    if (isLeft) {
+      for (let x = minX + 10 + beltOffset; x < minX + width - 10; x += step) {
+        ctx.fillRect(x, beltY - 2, 10, 4);
+      }
+    } else {
+      for (let x = minX + width - 20 - beltOffset; x > minX + 8; x -= step) {
+        ctx.fillRect(x, beltY - 2, 10, 4);
+      }
+    }
+
+    for (let rx = minX + 14; rx <= minX + width - 12; rx += 26) {
+      ctx.fillStyle = '#475569';
+      ctx.beginPath();
+      ctx.arc(rx, beltY + beltH / 2, 7.5, 0, Math.PI * 2);
+      ctx.fill();
+
+      const angle = dir * (beltOffset / 24) * Math.PI * 2;
+      ctx.strokeStyle = '#cbd5e1';
+      ctx.lineWidth = 1.8;
+      ctx.beginPath();
+      ctx.moveTo(rx - Math.cos(angle) * 5, beltY + beltH / 2 - Math.sin(angle) * 5);
+      ctx.lineTo(rx + Math.cos(angle) * 5, beltY + beltH / 2 + Math.sin(angle) * 5);
+      ctx.stroke();
+    }
+
+    ctx.restore();
+  }
+
+  function drawSupplyCrate(robot) {
+    ctx.save();
+    ctx.translate(robot.crateX, robot.y);
+    const dir = robot.side === 'left' ? 1 : -1;
+
+    ctx.fillStyle = 'rgba(0, 0, 0, 0.35)';
+    ctx.fillRect(-34, -4, 68, 4);
+
+    const crateGrad = ctx.createLinearGradient(-32, -52, 32, 0);
+    crateGrad.addColorStop(0, '#b45309');
+    crateGrad.addColorStop(0.5, '#92400e');
+    crateGrad.addColorStop(1, '#78350f');
+    ctx.fillStyle = crateGrad;
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.roundRect(-32, -50, 64, 50, 5);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#78350f';
+    ctx.fillRect(-25, -43, 50, 36);
+    ctx.strokeStyle = '#d97706';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-25, -43);
+    ctx.lineTo(25, -7);
+    ctx.stroke();
+
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(-32, -50, 10, 10);
+    ctx.fillRect(22, -50, 10, 10);
+    ctx.fillRect(-32, -10, 10, 10);
+    ctx.fillRect(22, -10, 10, 10);
+
+    ctx.fillStyle = '#facc15';
+    ctx.fillRect(-16, -29, 32, 9);
+    ctx.fillStyle = '#0f172a';
+    ctx.font = 'bold 7px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillText('ITEMS', 0, -22);
+
+    ctx.save();
+    ctx.translate(-dir * 30, -50);
+    ctx.rotate(-dir * robot.crateLidOpen * 0.72);
+    ctx.fillStyle = '#d97706';
+    ctx.strokeStyle = '#451a03';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(dir > 0 ? 0 : -62, -7, 62, 7, 3);
+    ctx.fill();
+    ctx.stroke();
+    ctx.restore();
+
+    ctx.restore();
+  }
+
+  function easeInOutCubic(t) {
+    return t < 0.5 ? 4 * t * t * t : 1 - Math.pow(-2 * t + 2, 3) / 2;
+  }
+
+  function drawRobot(robot) {
+    drawConveyorSystem(robot.side);
+    drawSupplyCrate(robot);
+
+    ctx.save();
+    ctx.translate(robot.x + robot.recoil, robot.y);
+    const dir = robot.side === 'left' ? 1 : -1;
+    const isLockActive = precisionLockRemaining > 0;
+    const isOverclocked = difficultyTier >= 3 || isLockActive;
+    const glowColor = isLockActive ? '#facc15' : (isOverclocked ? '#f43f5e' : '#38bdf8');
+
+    let torsoLean = 0;
+    let shoulderAngle = 0;
+    let elbowBend = 0.25;
+    let clawOpen = 0.2;
+    let showItemInClaw = false;
+
+    const e = easeInOutCubic(Math.min(1, robot.animT));
+
+    if (robot.animPhase === 'reaching') {
+      torsoLean = -0.26 * e;
+      shoulderAngle = -2.42 * e;
+      elbowBend = -0.85 * e;
+      clawOpen = 0.85 * Math.sin(e * Math.PI);
+    } else if (robot.animPhase === 'lifting') {
+      torsoLean = -0.26 + 0.14 * e;
+      shoulderAngle = -2.42 + 0.85 * e;
+      elbowBend = -0.85 + 0.55 * e;
+      clawOpen = 0.05;
+      showItemInClaw = true;
+    } else if (robot.animPhase === 'windup') {
+      torsoLean = -0.12 - 0.10 * e;
+      shoulderAngle = -1.57 - 0.35 * e;
+      elbowBend = -0.30 - 0.35 * e;
+      clawOpen = 0.05;
+      showItemInClaw = true;
+    } else if (robot.animPhase === 'throwing') {
+      const whip = Math.sin(e * Math.PI * 0.75);
+      torsoLean = -0.22 + 0.44 * whip;
+      shoulderAngle = -1.92 + 2.15 * whip;
+      elbowBend = -0.65 + 0.75 * whip;
+      clawOpen = 0.75 * whip;
+    } else {
+      const idleBob = Math.sin(elapsedTime * 3.5 + (dir > 0 ? 0 : 1.5)) * 0.04;
+      shoulderAngle = 0.18 + idleBob;
+      elbowBend = -0.25 - idleBob;
+    }
+
+    if (isLockActive) {
+      ctx.save();
+      ctx.strokeStyle = 'rgba(244, 63, 94, 0.55)';
+      ctx.lineWidth = 2.5;
+      ctx.setLineDash([8, 6]);
+      ctx.beginPath();
+      ctx.moveTo(dir * 16, -90);
+      ctx.lineTo(player.x - (robot.x + robot.recoil), (player.y + player.h * 0.5) - robot.y);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    ctx.fillStyle = '#1e293b';
+    ctx.strokeStyle = '#475569';
+    ctx.lineWidth = 2.5;
+    ctx.beginPath();
+    ctx.roundRect(-28, -18, 56, 18, 9);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#94a3b8';
+    for (let wx = -18; wx <= 18; wx += 12) {
+      ctx.beginPath();
+      ctx.arc(wx, -9, 3.5, 0, Math.PI * 2);
+      ctx.fill();
+    }
+
+    ctx.fillStyle = '#475569';
+    ctx.fillRect(-14, -26, 28, 9);
+    ctx.fillStyle = '#cbd5e1';
+    ctx.fillRect(-8, -26, 4, 9);
+    ctx.fillRect(4, -26, 4, 9);
+
+    ctx.save();
+    ctx.translate(0, -24);
+    ctx.rotate(dir * torsoLean);
+
+    ctx.fillStyle = '#334155';
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(-dir * 26 - 7, -42, 14, 34, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#64748b';
+    ctx.fillRect(-dir * 26 - 4, -52, 8, 10);
+
+    const torsoGrad = ctx.createLinearGradient(-28, -50, 28, 0);
+    torsoGrad.addColorStop(0, '#64748b');
+    torsoGrad.addColorStop(0.5, '#475569');
+    torsoGrad.addColorStop(1, '#334155');
+    ctx.fillStyle = torsoGrad;
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 2.2;
+    ctx.beginPath();
+    ctx.moveTo(-28, -48);
+    ctx.lineTo(28, -48);
+    ctx.lineTo(23, 0);
+    ctx.lineTo(-23, 0);
+    ctx.closePath();
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#1e293b';
+    ctx.fillRect(-18, -12, 36, 7);
+    ctx.fillStyle = '#facc15';
+    for (let hx = -14; hx <= 10; hx += 8) {
+      ctx.fillRect(hx, -11, 4, 5);
+    }
+
+    ctx.fillStyle = '#0f172a';
+    ctx.beginPath();
+    ctx.arc(0, -28, 12, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = glowColor;
+    ctx.shadowColor = glowColor;
+    ctx.shadowBlur = 12;
+    ctx.beginPath();
+    ctx.arc(0, -28, 7.5, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+
+    ctx.save();
+    ctx.translate(0, -50);
+    const headLook = (robot.animPhase === 'reaching' || robot.animPhase === 'lifting') ? -dir * 0.25 : 0;
+    ctx.rotate(headLook);
+
+    ctx.fillStyle = '#64748b';
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(-21, -30, 42, 29, 7);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = '#334155';
+    ctx.fillRect(-25, -22, 4, 14);
+    ctx.fillRect(21, -22, 4, 14);
+
+    ctx.strokeStyle = '#cbd5e1';
+    ctx.lineWidth = 3;
+    ctx.beginPath();
+    ctx.moveTo(-8, -30);
+    ctx.lineTo(-11, -46);
+    ctx.moveTo(8, -30);
+    ctx.lineTo(11, -42);
+    ctx.stroke();
+
+    ctx.fillStyle = glowColor;
+    ctx.beginPath();
+    ctx.arc(-11, -47, 4, 0, Math.PI * 2);
+    ctx.arc(11, -43, 3, 0, Math.PI * 2);
+    ctx.fill();
+
+    ctx.fillStyle = '#090d16';
+    ctx.beginPath();
+    ctx.roundRect(-16, -22, 32, 12, 4);
+    ctx.fill();
+
+    ctx.fillStyle = isLockActive ? '#facc15' : '#f43f5e';
+    ctx.shadowColor = isLockActive ? '#facc15' : '#f43f5e';
+    ctx.shadowBlur = 8;
+    const eyeShift = (robot.animPhase === 'reaching' || robot.animPhase === 'lifting') ? -dir * 3 : dir * 3;
+    ctx.beginPath();
+    ctx.roundRect(eyeShift - 11, -19, 9, 6, 2);
+    ctx.roundRect(eyeShift + 2, -19, 9, 6, 2);
+    ctx.fill();
+    ctx.shadowBlur = 0;
+    ctx.restore();
+
+    ctx.save();
+    ctx.translate(dir * 12, -36);
+    ctx.rotate(dir * shoulderAngle);
+
+    ctx.fillStyle = '#334155';
+    ctx.strokeStyle = '#94a3b8';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.arc(0, 0, 10, 0, Math.PI * 2);
+    ctx.fill();
+    ctx.stroke();
+
+    const upperLen = 30;
+    ctx.fillStyle = '#94a3b8';
+    ctx.strokeStyle = '#1e293b';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(0, -5.5, dir * upperLen, 11, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.translate(dir * upperLen, 0);
+    ctx.rotate(dir * elbowBend);
+
+    ctx.fillStyle = '#475569';
+    ctx.beginPath();
+    ctx.arc(0, 0, 7, 0, Math.PI * 2);
+    ctx.fill();
+
+    const foreLen = 30;
+    ctx.fillStyle = '#cbd5e1';
+    ctx.strokeStyle = '#334155';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.roundRect(0, -5, dir * foreLen, 10, 4);
+    ctx.fill();
+    ctx.stroke();
+
+    ctx.fillStyle = glowColor;
+    ctx.fillRect(dir * 5, -2, dir * (foreLen - 10), 4);
+
+    if (showItemInClaw && robot.heldItem) {
+      ctx.save();
+      ctx.translate(dir * (foreLen + 13), 0);
+      drawItemGraphic(ctx, robot.heldItem.type, robot.heldItem.scale * 0.88);
+      ctx.restore();
+    }
+
+    const clawX = dir * (foreLen + 2);
+    ctx.strokeStyle = '#f43f5e';
+    ctx.lineWidth = 3.5;
+    ctx.lineCap = 'round';
+    const spread = 5 + clawOpen * 8;
+    ctx.beginPath();
+    ctx.moveTo(clawX, -3);
+    ctx.lineTo(clawX + dir * 10, -spread);
+    ctx.lineTo(clawX + dir * 16, -spread + 4);
+    ctx.moveTo(clawX, 3);
+    ctx.lineTo(clawX + dir * 10, spread);
+    ctx.lineTo(clawX + dir * 16, spread - 4);
+    ctx.stroke();
+
+    ctx.restore();
+    ctx.restore();
+    ctx.restore();
+  }
+
+  function drawMiniHeart(cx, cy, size, filled) {
+    ctx.save();
+    ctx.translate(cx, cy);
+    ctx.beginPath();
+    ctx.moveTo(0, size * 0.35);
+    ctx.bezierCurveTo(-size * 0.55, -size * 0.25, -size, size * 0.15, 0, size);
+    ctx.bezierCurveTo(size, size * 0.15, size * 0.55, -size * 0.25, 0, size * 0.35);
+    ctx.closePath();
+
+    ctx.fillStyle = filled ? '#ef4444' : 'rgba(15, 23, 42, 0.75)';
+    ctx.fill();
+    ctx.lineWidth = 1.6;
+    ctx.strokeStyle = filled ? '#fecaca' : '#64748b';
+    ctx.stroke();
+    ctx.restore();
+  }
+
+  function drawPlayerAndShield() {
+    drawCharacterSprite(
+      ctx,
+      player.x,
+      player.y,
+      selectedChar,
+      player.facing,
+      player.walkCycle,
+      player.grounded,
+      player.squashX,
+      player.squashY
+    );
+
+    if (precisionLockRemaining > 0) {
+      ctx.save();
+      const cx = player.x;
+      const cy = player.y + player.h / 2;
+      ctx.strokeStyle = 'rgba(244, 63, 94, 0.85)';
+      ctx.lineWidth = 2.5;
+      ctx.beginPath();
+      ctx.arc(cx, cy, 44, 0, Math.PI * 2);
+      ctx.moveTo(cx - 54, cy); ctx.lineTo(cx - 34, cy);
+      ctx.moveTo(cx + 34, cy); ctx.lineTo(cx + 54, cy);
+      ctx.moveTo(cx, cy - 54); ctx.lineTo(cx, cy - 34);
+      ctx.moveTo(cx, cy + 34); ctx.lineTo(cx, cy + 54);
+      ctx.stroke();
+      ctx.restore();
+    }
+
+    if (player.shieldTimer > 0) {
+      ctx.save();
+      const centerX = player.x;
+      const centerY = player.y + player.h / 2;
+      const radius = 56;
+
+      const isExpiring = player.shieldTimer < 0.6;
+      const alpha = isExpiring ? (Math.floor(player.shieldTimer * 22) % 2 === 0 ? 0.85 : 0.25) : 0.9;
+      const isWardenShield = selectedChar === 'warden';
+
+      const shieldGrad = ctx.createRadialGradient(centerX, centerY, radius * 0.25, centerX, centerY, radius);
+      shieldGrad.addColorStop(0, 'rgba(56, 189, 248, 0.04)');
+      shieldGrad.addColorStop(0.72, isWardenShield ? `rgba(167, 139, 250, ${0.28 * alpha})` : `rgba(56, 189, 248, ${0.24 * alpha})`);
+      shieldGrad.addColorStop(1, isWardenShield ? `rgba(221, 214, 254, ${0.92 * alpha})` : `rgba(125, 211, 252, ${0.88 * alpha})`);
+
+      ctx.fillStyle = shieldGrad;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      ctx.fill();
+
+      ctx.strokeStyle = isWardenShield ? `rgba(221, 214, 254, ${alpha})` : `rgba(186, 230, 253, ${alpha})`;
+      ctx.lineWidth = 3.4;
+      ctx.shadowColor = isWardenShield ? '#a78bfa' : '#38bdf8';
+      ctx.shadowBlur = 15;
+      ctx.beginPath();
+      ctx.arc(centerX, centerY, radius, 0, Math.PI * 2);
+      ctx.stroke();
+      ctx.shadowBlur = 0;
+      ctx.restore();
+    }
+
+    ctx.save();
+    const totalHearts = player.maxHearts;
+    const heartSpacing = 20;
+    const startHeartX = player.x - ((totalHearts - 1) * heartSpacing) / 2;
+    const heartY = player.y - 34;
+
+    for (let h = 0; h < totalHearts; h++) {
+      drawMiniHeart(startHeartX + h * heartSpacing, heartY, 13, h < player.hearts);
+    }
+
+    ctx.font = 'bold 14px sans-serif';
+    ctx.textAlign = 'center';
+    ctx.fillStyle = '#f8fafc';
+    ctx.shadowColor = 'rgba(0,0,0,0.9)';
+    ctx.shadowBlur = 4;
+    ctx.fillText(playerName, player.x, heartY - 8);
+    ctx.restore();
+  }
+
+  function draw() {
+    ctx.save();
+    if (shakeTimer > 0) {
+      const mag = 7 * (shakeTimer / 0.28);
+      ctx.translate((Math.random() - 0.5) * mag, (Math.random() - 0.5) * mag);
+    }
+
+    drawBackground();
+    drawPlatforms();
+    robots.forEach(drawRobot);
+    drawPlayerAndShield();
+
+    projectiles.forEach(drawHouseholdItem);
+
+    particles.forEach(pt => {
+      ctx.globalAlpha = Math.max(0, pt.life / pt.maxLife);
+      ctx.fillStyle = pt.color;
+      ctx.beginPath();
+      ctx.arc(pt.x, pt.y, pt.size, 0, Math.PI * 2);
+      ctx.fill();
+    });
+    ctx.globalAlpha = 1;
+
+    ctx.restore();
+  }
+
+  function gameLoop(timestamp) {
+    if (!gameRunning) return;
+    const dt = Math.min(0.05, (timestamp - lastTimestamp) / 1000);
+    lastTimestamp = timestamp;
+
+    update(dt);
+    draw();
+
+    if (gameRunning) {
+      requestAnimationFrame(gameLoop);
+    }
+  }
+
+  function endGame() {
+    gameRunning = false;
+    hud.classList.add('hidden');
+    aimLockBanner.classList.add('hidden');
+    const finalScore = Math.floor(score);
+    const survivedStr = `${elapsedTime.toFixed(1)}s`;
+    const charLabel = CHARACTER_CONFIGS[selectedChar].label;
+
+    const earnedCoins = Math.floor(finalScore / 100);
+    userProfile.roboCoins = (userProfile.roboCoins || 0) + earnedCoins;
+    savePlayerProfile(userProfile);
+    refreshNameScreenUI();
+
+    currentLbFilter = 'both';
+    lbFilterBtns.forEach(b => {
+      b.classList.toggle('active', b.dataset.filter === 'both');
+    });
+
+    gameoverSummary.innerHTML = `
+      Great run, <strong>${escapeHtml(playerName)}</strong>! &bull; Time: <strong>${survivedStr}</strong> &bull; Score: <strong style="color:#facc15;">${finalScore.toLocaleString()}</strong>
+    `;
+
+    coinRewardBanner.innerHTML = `
+      ${SILVER_COIN_SVG}
+      <span>Earned: <strong style="color:#34d399;">+${earnedCoins.toLocaleString()} Silver Robo Coin${earnedCoins === 1 ? '' : 's'}</strong></span>
+      <span style="color:#64748b;">|</span>
+      <span>Current Robo Coins: <strong style="color:#f8fafc;">${userProfile.roboCoins.toLocaleString()}</strong></span>
+    `;
+
+    gameoverScreen.classList.remove('hidden');
+
+    submitAndRenderLeaderboard({
+      id: `${DEVICE_ID}_run_${Date.now()}`,
+      deviceId: DEVICE_ID,
+      isRealPlayer: true,
+      name: playerName,
+      char: charLabel,
+      time: survivedStr,
+      score: finalScore,
+      totalCoins: userProfile.roboCoins,
+      updatedAt: Date.now()
+    });
+  }
+</script>
+</body>
+</html>

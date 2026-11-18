@@ -455,7 +455,7 @@
     /* Leaderboard Panel on Game Over */
     .leaderboard-box {
       width: 100%;
-      max-width: 860px;
+      max-width: 880px;
       background: rgba(15, 23, 42, 0.92);
       border: 2px solid #334155;
       border-radius: 16px;
@@ -482,6 +482,12 @@
       color: #facc15;
     }
 
+    .lb-status-group {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
     .leaderboard-timer-badge {
       font-size: 0.78rem;
       font-weight: 800;
@@ -490,6 +496,23 @@
       border: 1px solid rgba(52, 211, 153, 0.38);
       padding: 3px 10px;
       border-radius: 999px;
+    }
+
+    .lb-refresh-btn {
+      font-size: 0.75rem;
+      font-weight: 800;
+      color: #38bdf8;
+      background: rgba(56, 189, 248, 0.14);
+      border: 1px solid rgba(56, 189, 248, 0.45);
+      padding: 3px 10px;
+      border-radius: 999px;
+      cursor: pointer;
+      transition: background 0.15s, transform 0.12s;
+    }
+
+    .lb-refresh-btn:hover {
+      background: rgba(56, 189, 248, 0.28);
+      transform: scale(1.04);
     }
 
     /* Filter Tabs inside Leaderboard */
@@ -769,7 +792,7 @@
   <!-- Step 1: Name Entry Screen -->
   <div id="name-screen" class="overlay">
     <h1>ROBO DASH</h1>
-    <p class="subtitle">Step 1: Enter your name to join the arena</p>
+    <p class="subtitle">Step 1: Enter your name to join the global arena</p>
 
     <div class="wallet-pill">
       <span class="robo-coin-icon" title="Silver Robo Coin">
@@ -885,7 +908,7 @@
     <div class="controls-hint">Move: <strong>A / D</strong> or <strong>◀ / ▶</strong> &nbsp;|&nbsp; Jump: <strong>W / Space / ▲</strong> &nbsp;|&nbsp; Shield Skill (Warden): <strong>S / ▼</strong></div>
   </div>
 
-  <!-- Game Over Screen + Leaderboard -->
+  <!-- Game Over Screen + Global Leaderboard -->
   <div id="gameover-screen" class="overlay hidden">
     <h1 style="background: linear-gradient(90deg, #f87171, #fb923c); -webkit-background-clip: text;">GAME OVER</h1>
     <p id="gameover-summary" class="subtitle" style="font-size:1.02rem; color:#e2e8f0; margin-bottom:8px;"></p>
@@ -894,8 +917,11 @@
 
     <div class="leaderboard-box">
       <div class="leaderboard-header">
-        <span class="leaderboard-title">🏆 ROBO DASH LEADERBOARD (1 ENTRY PER ROUND)</span>
-        <span id="lb-save-status" class="leaderboard-timer-badge">♾️ 1 Entry Per Round</span>
+        <span class="leaderboard-title">🌍 ROBO DASH GLOBAL WORLD LEADERBOARD</span>
+        <div class="lb-status-group">
+          <span id="lb-save-status" class="leaderboard-timer-badge">🌐 Live Worldwide</span>
+          <button type="button" id="lb-refresh-btn" class="lb-refresh-btn" title="Refresh Global Scores">🔄 REFRESH WORLD</button>
+        </div>
       </div>
 
       <!-- Filter Tabs -->
@@ -987,6 +1013,7 @@
   const coinRewardBanner = document.getElementById('coin-reward-banner');
   const leaderboardList = document.getElementById('leaderboard-list');
   const lbSaveStatusEl = document.getElementById('lb-save-status');
+  const lbRefreshBtn = document.getElementById('lb-refresh-btn');
   const lbFilterBtns = document.querySelectorAll('.lb-filter-btn');
   const lbRightColHeader = document.getElementById('lb-right-col-header');
   const btnShieldTouch = document.getElementById('btn-shield');
@@ -1050,13 +1077,16 @@
   `;
 
   // ==========================================
-  // STORAGE & ADMIN-ONLY RESET (NO UI BUTTONS)
+  // STORAGE & GLOBAL WORLD CLOUD LEADERBOARD
   // ==========================================
   const DEVICE_ID_KEY = 'robodash_v6_device_id';
   const SAVED_PROFILE_KEY = 'robodash_v6_profile';
   const BOARD_STORAGE_KEY = 'robodash_v6_scores';
   const RESET_EPOCH_KEY = 'robodash_reset_epoch_v6';
   const ONE_WEEK_MS = 7 * 24 * 60 * 60 * 1000;
+
+  // Shared Global Cloud Leaderboard Endpoint (syncs across all players worldwide)
+  const GLOBAL_CLOUD_ENDPOINT = 'https://kvdb.io/A9x7kP3mQ9vR2nL8wT4zB6/robodash_world_scores_v1';
 
   (function runRequestedSeasonWipe() {
     try {
@@ -1203,8 +1233,8 @@
   let precisionCycleTimer = 0;
   let precisionLockRemaining = 0;
 
-  // Escalating barrage throw scheduler state
-  let nextThrowTimer = 0.65;
+  // Gradual escalating throw scheduler state
+  let nextThrowTimer = 1.25;
   let activeRobotIndex = 0;
 
   // Conveyor Belt Animation State
@@ -1213,9 +1243,9 @@
   let conveyorSpawnTimer = 0;
 
   // ==========================================
-  // LEADERBOARD FUNCTIONS
-  // - Score Tabs: Strictly 1 row per round played
-  // - Robo Coins Tab: Strictly 1 row per player
+  // GLOBAL WORLD LEADERBOARD FUNCTIONS
+  // - Score Tabs: Strictly 1 row per round played, synced globally
+  // - Robo Coins Tab: Strictly 1 row per player globally
   // ==========================================
   let currentRunEntry = null;
   let currentLbFilter = 'both';
@@ -1228,8 +1258,10 @@
       item &&
       typeof item.name === 'string' &&
       item.name.trim().length > 0 &&
+      item.name.trim().length <= 18 &&
       typeof item.score === 'number' &&
       !Number.isNaN(item.score) &&
+      item.score >= 0 &&
       VALID_CHAR_LABELS.has(item.char)
     );
   }
@@ -1240,14 +1272,22 @@
     const allRuns = [];
 
     clean.forEach((entry, index) => {
-      // Preserve existing unique run ID; only create a deterministic fallback ID if missing
       const runId = (typeof entry.id === 'string' && entry.id.trim().length > 0)
         ? entry.id
         : `${entry.deviceId || 'run'}_${entry.updatedAt || 0}_${entry.score}_${entry.char}_${index}`;
 
       if (!seenIds.has(runId)) {
         seenIds.add(runId);
-        const copy = { ...entry, id: runId };
+        const copy = {
+          id: runId,
+          deviceId: String(entry.deviceId || 'world_player'),
+          name: entry.name.trim(),
+          char: entry.char,
+          time: String(entry.time || '--'),
+          score: Math.floor(Number(entry.score) || 0),
+          totalCoins: Math.max(0, Math.floor(Number(entry.totalCoins) || 0)),
+          updatedAt: Number(entry.updatedAt) || 0
+        };
         if (userProfile.name && copy.deviceId === DEVICE_ID) {
           copy.name = userProfile.name;
           copy.totalCoins = userProfile.roboCoins;
@@ -1257,7 +1297,8 @@
     });
 
     allRuns.sort((a, b) => b.score - a.score);
-    return allRuns;
+    // Keep top 250 worldwide runs so cloud sync stays fast
+    return allRuns.slice(0, 250);
   }
 
   function getLocalLeaderboardSync() {
@@ -1271,6 +1312,82 @@
   }
 
   cachedGlobalBoard = getLocalLeaderboardSync();
+
+  async function fetchRemoteGlobalBoard() {
+    try {
+      const res = await fetch(GLOBAL_CLOUD_ENDPOINT, {
+        method: 'GET',
+        headers: { 'Accept': 'application/json' },
+        cache: 'no-store'
+      });
+      if (!res.ok) return null;
+      const text = await res.text();
+      if (!text || !text.trim()) return [];
+      const data = JSON.parse(text);
+      return Array.isArray(data) ? data : (Array.isArray(data.runs) ? data.runs : []);
+    } catch (e) {
+      return null;
+    }
+  }
+
+  async function pushRemoteGlobalBoard(mergedRuns) {
+    try {
+      const res = await fetch(GLOBAL_CLOUD_ENDPOINT, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(mergedRuns)
+      });
+      return res.ok;
+    } catch (e) {
+      return false;
+    }
+  }
+
+  async function syncGlobalLeaderboard(optionalNewEntry = null) {
+    lbSaveStatusEl.textContent = '🌐 Syncing World...';
+
+    const localRuns = getLocalLeaderboardSync();
+    const baseList = optionalNewEntry
+      ? [...localRuns.filter(r => r.id !== optionalNewEntry.id), optionalNewEntry]
+      : [...localRuns, ...cachedGlobalBoard];
+
+    // Render locally right away so there is zero waiting
+    cachedGlobalBoard = normalizeLeaderboardRuns(baseList);
+    saveAllData(userProfile, cachedGlobalBoard);
+    renderFilteredLeaderboard();
+
+    // Fetch latest global runs from everyone in the world & merge
+    const remoteRuns = await fetchRemoteGlobalBoard();
+    if (remoteRuns !== null) {
+      const combined = normalizeLeaderboardRuns([
+        ...remoteRuns,
+        ...cachedGlobalBoard,
+        ...(optionalNewEntry ? [optionalNewEntry] : [])
+      ]);
+      cachedGlobalBoard = combined;
+      saveAllData(userProfile, combined);
+      renderFilteredLeaderboard();
+
+      // Upload merged list if we added a new run or updated our name/coins
+      if (optionalNewEntry || combined.length > remoteRuns.length) {
+        const uploaded = await pushRemoteGlobalBoard(combined);
+        lbSaveStatusEl.textContent = uploaded
+          ? `🌍 Live World (${combined.length} runs)`
+          : '🌐 World Loaded (Local Save)';
+      } else {
+        lbSaveStatusEl.textContent = `🌍 Live World (${combined.length} runs)`;
+      }
+    } else {
+      lbSaveStatusEl.textContent = '📡 Offline Mode (Saved Locally)';
+    }
+  }
+
+  // Pre-warm global board on page load
+  syncGlobalLeaderboard();
+
+  lbRefreshBtn.addEventListener('click', () => {
+    syncGlobalLeaderboard();
+  });
 
   function propagateNameChangeToLeaderboard(newName, newTotalCoins) {
     const now = Date.now();
@@ -1287,20 +1404,12 @@
     merged = normalizeLeaderboardRuns(merged);
     cachedGlobalBoard = merged;
     saveAllData(userProfile, merged);
+    pushRemoteGlobalBoard(merged);
   }
 
   function submitAndRenderLeaderboard(newEntry) {
     currentRunEntry = newEntry;
-
-    // Deduplicate cleanly by the single run ID so 1 round = 1 entry
-    const existing = getLocalLeaderboardSync().filter(item => item.id !== newEntry.id);
-    const merged = normalizeLeaderboardRuns([...existing, newEntry]);
-
-    cachedGlobalBoard = merged;
-    saveAllData(userProfile, merged);
-
-    lbSaveStatusEl.textContent = '♾️ 1 Entry Per Round';
-    renderFilteredLeaderboard();
+    syncGlobalLeaderboard(newEntry);
   }
 
   function getCharPillClass(charLabel) {
@@ -1313,7 +1422,7 @@
   function renderFilteredLeaderboard() {
     leaderboardList.innerHTML = '';
 
-    // Robo Coins tab: your name appears ONLY ONCE
+    // Robo Coins tab: each player worldwide appears ONCE with their current coin balance
     if (currentLbFilter === 'coins') {
       lbRightColHeader.textContent = 'Current Robo Coins';
 
@@ -1351,7 +1460,7 @@
       const coinRanking = Array.from(playerCoinMap.values()).sort((a, b) => b.currentCoins - a.currentCoins);
 
       if (coinRanking.length === 0) {
-        leaderboardList.innerHTML = `<div style="padding:18px; color:#94a3b8; font-size:0.9rem;">No Robo Coins in your wallet yet. Score 100+ points to earn silver Robo Coins!</div>`;
+        leaderboardList.innerHTML = `<div style="padding:18px; color:#94a3b8; font-size:0.9rem;">No Robo Coins recorded yet. Score 100+ points to earn silver Robo Coins!</div>`;
         return;
       }
 
@@ -1385,7 +1494,7 @@
       return;
     }
 
-    // Score leaderboards: show 1 entry per round played
+    // Score leaderboards: show 1 entry per round played worldwide
     lbRightColHeader.textContent = 'Run Time  |  Run Score';
 
     const filtered = cachedGlobalBoard
@@ -1393,7 +1502,7 @@
       .sort((a, b) => b.score - a.score);
 
     if (filtered.length === 0) {
-      leaderboardList.innerHTML = `<div style="padding:18px; color:#94a3b8; font-size:0.9rem;">No scores yet for ${escapeHtml(currentLbFilter)}. Play a round to claim #1!</div>`;
+      leaderboardList.innerHTML = `<div style="padding:18px; color:#94a3b8; font-size:0.9rem;">No global scores yet for ${escapeHtml(currentLbFilter)}. Play a round to claim #1 in the world!</div>`;
       return;
     }
 
@@ -1615,9 +1724,9 @@
   const robots = [
     {
       side: 'left',
-      x: 175,
+      x: 185,
       y: 462,
-      crateX: 64,
+      crateX: 60,
       animPhase: 'idle',
       animT: 0,
       exactTargetQueued: false,
@@ -1627,9 +1736,9 @@
     },
     {
       side: 'right',
-      x: canvas.width - 175,
+      x: canvas.width - 185,
       y: 462,
-      crateX: canvas.width - 64,
+      crateX: canvas.width - 60,
       animPhase: 'idle',
       animT: 0,
       exactTargetQueued: false,
@@ -2650,7 +2759,7 @@
         nextToCharsBtn.textContent = `CONTINUE AS ${userProfile.name.toUpperCase()} ➔`;
       } else {
         nameInput.disabled = false;
-        nameCooldownNote.textContent = `✏️ Weekly name change available! Changing your name updates your leaderboard entry too.`;
+        nameCooldownNote.textContent = `✏️ Weekly name change available! Changing your name updates the global leaderboard too.`;
         nameCooldownNote.classList.remove('hidden');
         nextToCharsBtn.textContent = `NEXT: PICK CHARACTER ➔`;
       }
@@ -2875,7 +2984,7 @@
       r.recoil = 0;
     });
 
-    nextThrowTimer = 0.45;
+    nextThrowTimer = 0.85;
     activeRobotIndex = 0;
 
     hudPlayerName.textContent = `${playerName} • ${cfg.label}`;
@@ -2929,9 +3038,18 @@
     const dir = robot.side === 'left' ? 1 : -1;
     const startX = robot.x + dir * 48;
     const startY = robot.y - 60;
-    const speedMultiplier = Math.min(2.15, 1 + (difficultyTier - 1) * 0.09 + elapsedTime * 0.004);
 
-    const extraScatterCount = Math.min(4, Math.floor(elapsedTime / 14) + (Math.random() < Math.min(0.75, elapsedTime * 0.015) ? 1 : 0));
+    // Gentle start (~0.88x speed) that ramps steadily up to 1.95x extreme speed late-game
+    const speedMultiplier = Math.min(1.95, 0.88 + (difficultyTier - 1) * 0.042 + elapsedTime * 0.0025);
+
+    // Strictly 1 single item per throw for the first 30 seconds!
+    // After 30s, slowly introduces +1 scatter item every ~35s (capped at 3 items max late-game)
+    let extraScatterCount = 0;
+    if (elapsedTime >= 30) {
+      const guaranteedExtra = Math.min(1, Math.floor((elapsedTime - 30) / 42));
+      const bonusChance = Math.min(0.65, (elapsedTime - 30) * 0.009);
+      extraScatterCount = Math.min(2, guaranteedExtra + (Math.random() < bonusChance ? 1 : 0));
+    }
     const volleyCount = 1 + extraScatterCount;
 
     for (let k = 0; k < volleyCount; k++) {
@@ -2943,42 +3061,42 @@
         const targetX = player.x;
         const targetY = player.y + player.h * 0.5;
         const dx = targetX - startX;
-        const focusedSpeed = 485 * speedMultiplier;
-        const flightTime = Math.max(0.85, Math.min(1.42, Math.abs(dx) / focusedSpeed));
-        projGravity = 248;
+        const focusedSpeed = 435 * speedMultiplier;
+        const flightTime = Math.max(0.95, Math.min(1.55, Math.abs(dx) / focusedSpeed));
+        projGravity = 235;
         vx = dx / flightTime;
         vy = (targetY - startY - 0.5 * projGravity * flightTime * flightTime) / flightTime;
       } else {
         const zoneRoll = Math.random();
 
-        if (zoneRoll < 0.24) {
+        if (zoneRoll < 0.22) {
           isUnderThrow = true;
           const lipX = robot.side === 'left' ? 295 : canvas.width - 295;
           const underSpotX = robot.side === 'left'
             ? (35 + Math.random() * 215)
             : (canvas.width - 35 - Math.random() * 215);
 
-          const flightTime = 1.15 + Math.random() * 0.32;
-          const tLip = 0.26;
+          const flightTime = 1.28 + Math.random() * 0.35;
+          const tLip = 0.28;
           ax = (2 * (underSpotX - startX) - (2 * flightTime / tLip) * (lipX - startX)) /
                (flightTime * flightTime - flightTime * tLip);
           vx = (lipX - startX - 0.5 * ax * tLip * tLip) / tLip;
-          projGravity = 930;
+          projGravity = 860;
           vy = ((FLOOR_Y - 22 - startY) - 0.5 * projGravity * flightTime * flightTime) / flightTime;
         } else if (zoneRoll < 0.58) {
           const randomArenaX = 35 + Math.random() * (canvas.width - 70);
-          const flightTime = Math.max(0.88, (1.68 - Math.min(0.65, elapsedTime * 0.008)) + Math.random() * 0.42);
-          projGravity = (780 + Math.random() * 260) * Math.min(1.5, 1 + elapsedTime * 0.003);
+          const flightTime = Math.max(0.96, (1.88 - Math.min(0.74, elapsedTime * 0.0068)) + Math.random() * 0.42);
+          projGravity = (730 + Math.random() * 220) * Math.min(1.45, 1 + elapsedTime * 0.0024);
           vx = (randomArenaX - startX) / flightTime;
           vy = ((FLOOR_Y - 22 - startY) - 0.5 * projGravity * flightTime * flightTime) / flightTime;
           if (vy < -320) vy = -320;
         } else {
           isStraightThrow = true;
-          const baseSpeed = (340 + Math.random() * 260) * speedMultiplier;
+          const baseSpeed = (300 + Math.random() * 200) * speedMultiplier;
           vx = dir * baseSpeed;
           const targetY = FLOOR_Y - 28 - Math.random() * 240;
-          const travelTime = Math.max(0.55, Math.abs((canvas.width * (0.35 + Math.random() * 0.55)) / baseSpeed));
-          projGravity = (110 + Math.random() * 140) * speedMultiplier;
+          const travelTime = Math.max(0.60, Math.abs((canvas.width * (0.35 + Math.random() * 0.55)) / baseSpeed));
+          projGravity = (100 + Math.random() * 120) * speedMultiplier;
           vy = (targetY - startY - 0.5 * projGravity * travelTime * travelTime) / travelTime;
         }
       }
@@ -2991,7 +3109,7 @@
         ax,
         gravity: projGravity,
         rotation: Math.random() * Math.PI * 2,
-        rotSpeed: (Math.random() - 0.5) * 10,
+        rotSpeed: (Math.random() - 0.5) * 9,
         type: item.type,
         scale: item.scale,
         radius: item.radius,
@@ -3037,26 +3155,27 @@
     difficultyTimer += dt;
     score += dt * 10 * difficultyTier;
 
-    if (difficultyTimer >= 4.0) {
-      difficultyTimer -= 4.0;
+    // Difficulty tier ticks every 7 seconds for a steady, rewarding climb
+    if (difficultyTimer >= 7.0) {
+      difficultyTimer -= 7.0;
       difficultyTier++;
     }
 
-    const beltSpeed = 85 + difficultyTier * 11;
+    const beltSpeed = 72 + difficultyTier * 9;
     beltOffset = (beltOffset + beltSpeed * dt) % 24;
 
     conveyorSpawnTimer -= dt;
     if (conveyorSpawnTimer <= 0) {
       spawnConveyorItem('left');
       spawnConveyorItem('right');
-      conveyorSpawnTimer = Math.max(0.32, 1.25 - elapsedTime * 0.014);
+      conveyorSpawnTimer = Math.max(0.45, 1.5 - elapsedTime * 0.01);
     }
 
     for (let i = conveyorItems.length - 1; i >= 0; i--) {
       const ci = conveyorItems[i];
-      ci.progress += dt * (0.95 + difficultyTier * 0.07);
+      ci.progress += dt * (0.85 + difficultyTier * 0.055);
       if (ci.progress >= 1.32) {
-        const crateX = ci.side === 'left' ? 64 : canvas.width - 64;
+        const crateX = ci.side === 'left' ? 60 : canvas.width - 60;
         spawnParticles(crateX, 422, '#facc15', 4);
         conveyorItems.splice(i, 1);
       }
@@ -3073,7 +3192,7 @@
         precisionCycleTimer -= 10.0;
         precisionLockRemaining = 1.0;
         aimLockBanner.classList.remove('hidden');
-        nextThrowTimer = 0.04;
+        nextThrowTimer = Math.min(nextThrowTimer, 0.2);
       }
     }
 
@@ -3155,12 +3274,13 @@
       }
     }
 
-    const animSpeedScale = Math.min(3.4, (precisionLockRemaining > 0 ? 1.45 : 1.0) + elapsedTime * 0.032);
+    // Deliberate, clearly visible crate reach + lift animation that speeds up smoothly over time
+    const animSpeedScale = Math.min(2.8, 0.70 + elapsedTime * 0.019 + (precisionLockRemaining > 0 ? 0.30 : 0));
     robots.forEach(robot => {
       robot.recoil *= 0.85;
 
       if (robot.animPhase === 'reaching') {
-        robot.animT += dt * 7.2 * animSpeedScale;
+        robot.animT += dt * 3.8 * animSpeedScale;
         robot.crateLidOpen = Math.min(1, robot.animT * 1.6);
         if (robot.animT >= 1) {
           robot.animT = 0;
@@ -3168,14 +3288,14 @@
           spawnParticles(robot.crateX, robot.y - 44, '#facc15', 5);
         }
       } else if (robot.animPhase === 'lifting') {
-        robot.animT += dt * 7.5 * animSpeedScale;
-        robot.crateLidOpen = Math.max(0, 1 - robot.animT * 0.7);
+        robot.animT += dt * 4.4 * animSpeedScale;
+        robot.crateLidOpen = Math.max(0, 1 - robot.animT * 0.65);
         if (robot.animT >= 1) {
           robot.animT = 0;
           robot.animPhase = 'windup';
         }
       } else if (robot.animPhase === 'windup') {
-        robot.animT += dt * 8.5 * animSpeedScale;
+        robot.animT += dt * 5.2 * animSpeedScale;
         robot.crateLidOpen = Math.max(0, robot.crateLidOpen - dt * 3);
         if (robot.animT >= 1) {
           robot.animT = 0;
@@ -3183,7 +3303,7 @@
           releaseHeldItemFromRobot(robot);
         }
       } else if (robot.animPhase === 'throwing') {
-        robot.animT += dt * 6.5 * animSpeedScale;
+        robot.animT += dt * 5.2 * animSpeedScale;
         robot.crateLidOpen = Math.max(0, robot.crateLidOpen - dt * 3);
         if (robot.animT >= 1) {
           robot.animT = 0;
@@ -3194,8 +3314,10 @@
       }
     });
 
+    // Smooth escalation curve:
+    // - Starts at max 3 items in the air, slowly rising up to 28 over ~110s
     const isLockActive = precisionLockRemaining > 0;
-    const maxActiveItems = Math.min(48, 6 + Math.floor(elapsedTime * 0.65) + (isLockActive ? 8 : 0));
+    const maxActiveItems = Math.min(28, 3 + Math.floor(elapsedTime * 0.22) + (isLockActive ? 2 : 0));
 
     nextThrowTimer -= dt;
     if (nextThrowTimer <= 0) {
@@ -3205,19 +3327,23 @@
           startRobotCrateGrab(currentRobot, isLockActive);
         }
 
-        const dualThrowChance = Math.min(0.95, 0.20 + elapsedTime * 0.015);
-        if (isLockActive || Math.random() < dualThrowChance) {
+        // Second robot only joins in simultaneously after 22s, ramping up gradually
+        const dualThrowChance = elapsedTime < 22 ? 0 : Math.min(0.80, (elapsedTime - 22) * 0.011);
+        if ((isLockActive && elapsedTime >= 22) || Math.random() < dualThrowChance) {
           const otherRobot = robots[1 - activeRobotIndex];
           if (otherRobot.animPhase === 'idle') {
             startRobotCrateGrab(otherRobot, false);
           }
         }
 
-        const minCooldown = Math.max(0.08, 0.85 - elapsedTime * 0.014);
+        // Cooldown starts at 1.55s (calm & readable) and gradually tightens down to 0.24s (extreme!)
+        const baseCooldown = Math.max(0.24, 1.55 - elapsedTime * 0.013);
         activeRobotIndex = 1 - activeRobotIndex;
-        nextThrowTimer = isLockActive ? Math.min(0.22, minCooldown) : minCooldown * (0.75 + Math.random() * 0.5);
+        nextThrowTimer = isLockActive
+          ? Math.max(0.30, baseCooldown * 0.65)
+          : baseCooldown * (0.85 + Math.random() * 0.35);
       } else {
-        nextThrowTimer = 0.08;
+        nextThrowTimer = 0.14;
       }
     }
 
@@ -3322,7 +3448,7 @@
     const isLeft = side === 'left';
     const dir = isLeft ? 1 : -1;
     const beltStartX = isLeft ? -16 : canvas.width + 16;
-    const beltEndX = isLeft ? 74 : canvas.width - 74;
+    const beltEndX = isLeft ? 70 : canvas.width - 70;
     const beltY = 336;
     const beltH = 22;
 
@@ -3335,7 +3461,7 @@
     ctx.fillRect(bracketX, beltY - 14, 28, 52);
     ctx.strokeRect(bracketX, beltY - 14, 28, 52);
 
-    const chuteX = isLeft ? 62 : canvas.width - 62;
+    const chuteX = isLeft ? 58 : canvas.width - 58;
     ctx.fillStyle = 'rgba(56, 189, 248, 0.14)';
     ctx.strokeStyle = '#38bdf8';
     ctx.lineWidth = 2;
@@ -3451,7 +3577,7 @@
 
     ctx.save();
     ctx.translate(-dir * 30, -50);
-    ctx.rotate(-dir * robot.crateLidOpen * 0.72);
+    ctx.rotate(-dir * robot.crateLidOpen * 0.85);
     ctx.fillStyle = '#d97706';
     ctx.strokeStyle = '#451a03';
     ctx.lineWidth = 2;
@@ -3476,7 +3602,7 @@
     ctx.translate(robot.x + robot.recoil, robot.y);
     const dir = robot.side === 'left' ? 1 : -1;
     const isLockActive = precisionLockRemaining > 0;
-    const isOverclocked = difficultyTier >= 3 || isLockActive;
+    const isOverclocked = difficultyTier >= 5 || isLockActive;
     const glowColor = isLockActive ? '#facc15' : (isOverclocked ? '#f43f5e' : '#38bdf8');
 
     let torsoLean = 0;
@@ -3488,27 +3614,28 @@
     const e = easeInOutCubic(Math.min(1, robot.animT));
 
     if (robot.animPhase === 'reaching') {
-      torsoLean = -0.26 * e;
-      shoulderAngle = -2.42 * e;
-      elbowBend = -0.85 * e;
-      clawOpen = 0.85 * Math.sin(e * Math.PI);
+      // Deep, unmistakable reach all the way back into the crate behind the robot
+      torsoLean = -0.44 * e;
+      shoulderAngle = -2.62 * e;
+      elbowBend = -0.96 * e;
+      clawOpen = 0.95 * Math.sin(e * Math.PI);
     } else if (robot.animPhase === 'lifting') {
-      torsoLean = -0.26 + 0.14 * e;
-      shoulderAngle = -2.42 + 0.85 * e;
-      elbowBend = -0.85 + 0.55 * e;
+      torsoLean = -0.44 + 0.28 * e;
+      shoulderAngle = -2.62 + 1.02 * e;
+      elbowBend = -0.96 + 0.64 * e;
       clawOpen = 0.05;
       showItemInClaw = true;
     } else if (robot.animPhase === 'windup') {
-      torsoLean = -0.12 - 0.10 * e;
-      shoulderAngle = -1.57 - 0.35 * e;
-      elbowBend = -0.30 - 0.35 * e;
+      torsoLean = -0.16 - 0.14 * e;
+      shoulderAngle = -1.60 - 0.38 * e;
+      elbowBend = -0.32 - 0.36 * e;
       clawOpen = 0.05;
       showItemInClaw = true;
     } else if (robot.animPhase === 'throwing') {
       const whip = Math.sin(e * Math.PI * 0.75);
-      torsoLean = -0.22 + 0.44 * whip;
-      shoulderAngle = -1.92 + 2.15 * whip;
-      elbowBend = -0.65 + 0.75 * whip;
+      torsoLean = -0.30 + 0.52 * whip;
+      shoulderAngle = -1.98 + 2.22 * whip;
+      elbowBend = -0.68 + 0.78 * whip;
       clawOpen = 0.75 * whip;
     } else {
       const idleBob = Math.sin(elapsedTime * 3.5 + (dir > 0 ? 0 : 1.5)) * 0.04;
@@ -3602,7 +3729,7 @@
 
     ctx.save();
     ctx.translate(0, -50);
-    const headLook = (robot.animPhase === 'reaching' || robot.animPhase === 'lifting') ? -dir * 0.25 : 0;
+    const headLook = (robot.animPhase === 'reaching' || robot.animPhase === 'lifting') ? -dir * 0.32 : 0;
     ctx.rotate(headLook);
 
     ctx.fillStyle = '#64748b';
@@ -3660,7 +3787,7 @@
     ctx.fill();
     ctx.stroke();
 
-    const upperLen = 30;
+    const upperLen = 32;
     ctx.fillStyle = '#94a3b8';
     ctx.strokeStyle = '#1e293b';
     ctx.lineWidth = 2;
@@ -3677,7 +3804,7 @@
     ctx.arc(0, 0, 7, 0, Math.PI * 2);
     ctx.fill();
 
-    const foreLen = 30;
+    const foreLen = 32;
     ctx.fillStyle = '#cbd5e1';
     ctx.strokeStyle = '#334155';
     ctx.lineWidth = 2;
